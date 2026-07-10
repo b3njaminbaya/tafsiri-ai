@@ -34,3 +34,6 @@ venv/
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code local tool state — not project source
+.claude/

@@ -16,7 +16,7 @@ from ....deps import ACCESS_TOKEN_COOKIE_NAME, get_current_active_user, get_db, 
 from ....email_client import EmailClient, get_email_client
 from ....models import APIKey, AuthToken, Role, User
 from ....oauth_client import OAuthClient, OAuthError, get_github_oauth_client, get_google_oauth_client
-from ....security import create_access_token, get_password_hash, verify_password
+from ....security import create_access_token, get_password_hash, normalize_email, verify_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -87,7 +87,8 @@ async def register(
     db: AsyncSession = Depends(get_db),
     email_client: EmailClient = Depends(get_email_client),
 ):
-    existing = await db.execute(select(User).where(User.email == user_in.email))
+    email = normalize_email(user_in.email)
+    existing = await db.execute(select(User).where(User.email == email))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Email already registered")
 
@@ -98,13 +99,13 @@ async def register(
     # registration behaves exactly as before.
     role_name = (
         "admin"
-        if settings.first_admin_email and user_in.email.lower() == settings.first_admin_email.lower()
+        if settings.first_admin_email and email == normalize_email(settings.first_admin_email)
         else "user"
     )
     role = (await db.execute(select(Role).where(Role.name == role_name))).scalar_one_or_none()
 
     user = User(
-        email=user_in.email,
+        email=email,
         hashed_password=get_password_hash(user_in.password),
         role=role,
     )
@@ -130,7 +131,7 @@ async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(User).where(User.email == form_data.username))
+    result = await db.execute(select(User).where(User.email == normalize_email(form_data.username)))
     user = result.scalar_one_or_none()
     # OAuth-only accounts have no password (hashed_password is NULL) — treat
     # exactly like a wrong password rather than erroring on the None.
@@ -175,6 +176,7 @@ OAUTH_STATE_COOKIE_NAME = "oauth_state"
 async def _find_or_create_oauth_user(
     db: AsyncSession, provider: str, subject: str, email: str
 ) -> User:
+    email = normalize_email(email)
     result = await db.execute(
         select(User)
         .options(selectinload(User.role))
@@ -199,7 +201,7 @@ async def _find_or_create_oauth_user(
 
     role_name = (
         "admin"
-        if settings.first_admin_email and email.lower() == settings.first_admin_email.lower()
+        if settings.first_admin_email and email == normalize_email(settings.first_admin_email)
         else "user"
     )
     role = (await db.execute(select(Role).where(Role.name == role_name))).scalar_one_or_none()
@@ -314,7 +316,7 @@ async def forgot_password(
     db: AsyncSession = Depends(get_db),
     email_client: EmailClient = Depends(get_email_client),
 ):
-    result = await db.execute(select(User).where(User.email == body.email))
+    result = await db.execute(select(User).where(User.email == normalize_email(body.email)))
     user = result.scalar_one_or_none()
     # Same response regardless of whether the email exists — otherwise this
     # endpoint becomes a user-enumeration oracle.

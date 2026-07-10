@@ -12,9 +12,11 @@ from .core.limiter import limiter
 # email it would have sent when SMTP isn't configured) are silently dropped —
 # Python's root logger defaults to WARNING with no handler attached.
 logging.basicConfig(level=logging.INFO)
+from .api.v1.routes import admin as admin_routes
 from .api.v1.routes import analytics as analytics_routes
 from .api.v1.routes import auth as auth_routes
 from .api.v1.routes import billing as billing_routes
+from .api.v1.routes import blog as blog_routes
 from .api.v1.routes import community as community_routes
 from .api.v1.routes import datasets as datasets_routes
 from .api.v1.routes import forum as forum_routes
@@ -65,6 +67,14 @@ tags_metadata = [
         "name": "forum",
         "description": "Community discussion posts and replies.",
     },
+    {
+        "name": "blog",
+        "description": "Admin-authored articles — public published list/detail, admin-only CRUD and publishing.",
+    },
+    {
+        "name": "admin",
+        "description": "User management: listing, role changes, activation/deactivation.",
+    },
 ]
 
 app = FastAPI(
@@ -102,4 +112,6 @@ api_router.include_router(billing_routes.router)
 api_router.include_router(privacy_routes.router)
 api_router.include_router(glossary_routes.router)
 api_router.include_router(forum_routes.router)
+api_router.include_router(blog_routes.router)
+api_router.include_router(admin_routes.router)
 app.include_router(api_router)

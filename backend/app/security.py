@@ -7,6 +7,17 @@ from .core.config import settings
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
+def normalize_email(email: str) -> str:
+    """Emails are conventionally case-insensitive — without this, 'User@x.com'
+    and 'user@x.com' register as two different accounts, and a login attempt
+    that doesn't exactly match the stored casing (e.g. a browser
+    autocapitalizing the first letter) fails as an indistinguishable-from-
+    wrong-password 401. Every place an email is stored or looked up should
+    go through this first.
+    """
+    return email.strip().lower()
+
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 

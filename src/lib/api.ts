@@ -138,6 +138,61 @@ export interface ForumPostDetail {
   replies: ForumReply[];
 }
 
+export type BlogPostStatus = "draft" | "published";
+
+export interface BlogPost {
+  id: number;
+  slug: string;
+  title: string;
+  excerpt?: string | null;
+  category?: string | null;
+  status: BlogPostStatus;
+  author_handle: string;
+  published_at?: string | null;
+  created_at: string;
+}
+
+export interface BlogPostDetail extends BlogPost {
+  body: string;
+}
+
+export interface BlogPostInput {
+  title: string;
+  excerpt?: string | null;
+  body: string;
+  category?: string | null;
+  status?: BlogPostStatus;
+}
+
+export interface AdminUser {
+  id: number;
+  email: string;
+  display_name?: string | null;
+  role: { id: number; name: string } | null;
+  is_active: boolean;
+  is_verified: boolean;
+  created_at: string;
+}
+
+export interface GlossaryTerm {
+  id: number;
+  domain: string;
+  source_lang: string;
+  target_lang: string;
+  source_term: string;
+  target_term: string;
+  created_by_id?: number | null;
+  created_at: string;
+}
+
+export interface GlossaryTermInput {
+  domain: string;
+  source_lang: string;
+  target_lang: string;
+  source_term: string;
+  target_term: string;
+}
+
 export interface DailyCount {
   date: string;
   count: number;
@@ -419,6 +474,50 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+
+  listBlogPosts: (category?: string) =>
+    request<BlogPost[]>(`/blog/posts${category ? `?category=${encodeURIComponent(category)}` : ""}`),
+
+  getBlogPost: (slug: string) => request<BlogPostDetail>(`/blog/posts/${slug}`),
+
+  adminListBlogPosts: () => request<BlogPost[]>("/blog/admin/posts"),
+
+  adminGetBlogPost: (postId: number) => request<BlogPostDetail>(`/blog/admin/posts/${postId}`),
+
+  adminCreateBlogPost: (payload: BlogPostInput) =>
+    request<BlogPostDetail>("/blog/admin/posts", { method: "POST", body: JSON.stringify(payload) }),
+
+  adminUpdateBlogPost: (postId: number, payload: Partial<BlogPostInput>) =>
+    request<BlogPostDetail>(`/blog/admin/posts/${postId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+
+  adminDeleteBlogPost: (postId: number) =>
+    request<{ message: string }>(`/blog/admin/posts/${postId}`, { method: "DELETE" }),
+
+  adminListUsers: () => request<AdminUser[]>("/admin/users"),
+
+  adminUpdateUser: (userId: number, payload: { role_name?: string; is_active?: boolean }) =>
+    request<AdminUser>(`/admin/users/${userId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+
+  listGlossaryTerms: (params?: { domain?: string; source_lang?: string; target_lang?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.domain) qs.set("domain", params.domain);
+    if (params?.source_lang) qs.set("source_lang", params.source_lang);
+    if (params?.target_lang) qs.set("target_lang", params.target_lang);
+    const query = qs.toString();
+    return request<GlossaryTerm[]>(`/glossary/${query ? `?${query}` : ""}`);
+  },
+
+  createGlossaryTerm: (payload: GlossaryTermInput) =>
+    request<GlossaryTerm>("/glossary/", { method: "POST", body: JSON.stringify(payload) }),
+
+  deleteGlossaryTerm: (termId: number) =>
+    request<{ message: string }>(`/glossary/${termId}`, { method: "DELETE" }),
 };
 
 export { ApiError };

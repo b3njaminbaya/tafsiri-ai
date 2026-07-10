@@ -192,6 +192,26 @@ class ForumReply(Base):
     author = relationship("User")
     post = relationship("ForumPost", back_populates="replies")
 
+class BlogPost(Base):
+    """Admin-authored articles. `status` is "draft" or "published" — drafts
+    are only ever visible via the admin-only routes; the public routes
+    filter to published unconditionally.
+    """
+    __tablename__ = "blog_posts"
+    id = Column(Integer, primary_key=True, index=True)
+    author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    slug = Column(String(255), unique=True, nullable=False, index=True)
+    title = Column(String(255), nullable=False)
+    excerpt = Column(String(500), nullable=True)
+    body = Column(Text, nullable=False)
+    category = Column(String(64), nullable=True)
+    status = Column(String(16), default="draft", nullable=False)
+    published_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+
+    author = relationship("User")
+
 class GlossaryTerm(Base):
     """Admin-managed domain terminology. The backend owns this data and
     resolves matches itself (source_term appears as a whole word in the

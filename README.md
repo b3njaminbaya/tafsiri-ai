@@ -1,162 +1,213 @@
 # NMT Agent for Low-Resource Languages
 
-## Overview
-The **NMT Agent for Low-Resource Languages** is an advanced Neural Machine Translation (NMT) system designed to enhance language accessibility by providing high-quality translations for underrepresented languages. By leveraging cutting-edge AI techniques such as transfer learning and few-shot learning, this platform enables real-time and batch translations, dataset management, and continuous model improvements through active learning and user feedback.
+A full-stack neural machine translation platform focused on low-resource African
+and Sub-Saharan languages (Swahili, Amharic, Hausa, Igbo, Yoruba, Zulu, Xhosa,
+Somali, Lingala, Wolof, Fulah, Ganda) alongside major world languages, with
+real persistence, a trained multilingual model, and the account/community/
+billing infrastructure a production product needs around it.
+
+The project is organized as three cooperating services — a React frontend, a
+FastAPI backend, and a dedicated translation microservice — plus the Docker
+Compose infrastructure that ties them together with Postgres, Redis, and
+MinIO.
+
+## What it does
+
+Visitors can translate text between dozens of language pairs, with optional
+domain-specific terminology forcing (medical, legal, technical glossaries)
+that guarantees a chosen term appears in the output regardless of general
+model quality. Every translation is persisted with a confidence score, so
+registered users get a real history and personal analytics, and low-confidence
+translations automatically enter an active-learning review queue where
+translators and admins can submit corrections that feed back into future
+model improvement.
+
+Beyond translation, the platform includes a community forum for discussion,
+a real blog with an admin-authored CMS, dataset upload and sharing for
+parallel corpora, GDPR-compliant data export and account erasure, configurable
+privacy/consent settings, and a Stripe-backed subscription/billing layer. An
+admin panel provides user management (role changes, account activation), full
+control over the domain glossary, and blog publishing — all gated behind role-
+based access control.
+
+Every optional third-party integration — email delivery, Google/GitHub OAuth,
+and Stripe billing — is designed to degrade gracefully. The application boots
+and every core feature works normally whether or not those credentials are
+configured; the dependent endpoint either logs what it would have done (email)
+or returns a clean, honest error (OAuth, billing) instead of crashing.
+
+## Architecture
+
+**Frontend** (`/src`) — React 18 with TypeScript, Vite, Tailwind CSS, and
+shadcn/ui components. Authenticates against the backend via an httpOnly
+session cookie (with Bearer-token support for API/CLI use), and communicates
+exclusively through the backend's REST API — it never talks to the ML service
+or the database directly.
+
+**Backend** (`/backend`) — FastAPI with fully async SQLAlchemy over Postgres,
+Alembic-managed migrations, Redis-backed translation caching, and MinIO/S3
+object storage for dataset uploads. Owns every piece of business logic: auth
+and session management, role-based access control, the domain glossary, GDPR
+request handling, billing, community content (forum and blog), and analytics
+aggregation. Proxies actual translation requests to the ML service over an
+async HTTP client.
+
+**ML service** (`/ml-service`) — A dedicated FastAPI microservice wrapping
+Meta's M2M100 multilingual translation model via Hugging Face Transformers,
+with automatic source-language detection and constrained beam search for
+glossary term forcing. Kept separate from the backend so the (large,
+GPU-friendly) model dependency and its resource footprint never has to ship
+alongside ordinary API traffic.
+
+**Infrastructure** (`/infra`) — Docker Compose definitions for Postgres,
+Redis, MinIO, the backend, and the ML service, plus the `.env`-based
+configuration that lets every optional integration be enabled or left off
+independently. See `infra/README.md` for exact setup steps.
 
 ## Features
-### 1. User Authentication & Management
-- Secure user authentication (OAuth, email, social login)
-- Role-based access control (Admin, Translator, Regular User)
-- API key generation for developers
 
-### 2. Translation Module
-- Support for text input & translation
-- Language detection for source text
-- Real-time and batch translation options
-- Domain-specific translation customization (medical, legal, technical, etc.)
-- Translation confidence scoring
-- Post-translation editing and feedback collection
+Authentication is cookie-based for the browser SPA and Bearer-token based for
+API and CLI clients, with email/password registration, password reset and
+email verification (both logged instead of emailed when no SMTP server is
+configured), and optional Google/GitHub OAuth login that automatically links
+to an existing account sharing the same email address. A designated bootstrap
+admin email can be configured so the very first account created is
+automatically granted the admin role, without ever needing a direct database
+edit.
 
-### 3. Dataset Management
-- Upload and store bilingual corpora
-- Automatic dataset augmentation (synthetic parallel corpora)
-- Dataset version control
-- Community-driven data contributions and quality reviews
+Translation supports both single and batch requests, automatic source
+language detection, per-domain glossary term forcing, response caching to
+avoid redundant model calls for identical requests, and a full personal
+history with user-submitted feedback ratings. Registered translators and
+admins additionally see an active-learning review queue surfacing the
+lowest-confidence translations still awaiting a human correction.
 
-### 4. AI Model Training & Continuous Improvement
-- Transfer learning for training NMT models
-- Few-shot learning to handle low-resource language translation
-- Active learning to enhance model accuracy over time
-- Detection of bias and hallucination in translations
-- Performance tracking using BLEU, METEOR, and TER scores
+Dataset management allows any authenticated user to upload parallel-corpus
+files (TSV, CSV, TXT, JSON, JSONL, TMX, or XLIFF, validated by extension
+before ever reaching storage) with associated language pair and domain
+metadata, and to browse or download what others have contributed via
+time-limited presigned URLs.
 
-### 5. Analytics & Visualization
-- Track user translation history
-- Generate accuracy reports and performance metrics
-- Visualize language coverage and trends with interactive dashboards
+The community layer includes a real, database-backed discussion forum
+organized into fixed categories with posts and threaded replies, public
+contribution statistics and leaderboards, and a blog with genuine draft and
+published states — content is authored and managed entirely through the
+admin panel rather than hardcoded into the frontend.
 
-### 6. API for Developers
-- REST API for programmatic access
-- WebSockets for real-time translations
-- Rate limiting and access control mechanisms
+Privacy and compliance features include per-user consent settings for
+analytics, marketing, and data collection; an immediate, real JSON export of
+everything a user's account touches; and account erasure that anonymizes
+rather than hard-deletes a user, preserving the referential integrity of
+translations, corrections, and dataset uploads that other parts of the
+platform legitimately still reference. Formal GDPR data-subject requests are
+logged, with access and portability requests fulfilled automatically through
+the export endpoint.
 
-### 7. Community Contributions & Feedback
-- Allow users to review translations and suggest corrections
-- Crowdsourced data collection for training datasets
-- Dedicated forum for linguists, researchers, and developers to collaborate
+Billing is built on Stripe Checkout for subscription purchases, with API key
+quota tiers updated automatically via webhook on successful payment. Every
+billing-related endpoint checks that Stripe credentials are actually
+configured before attempting a call, so an unconfigured deployment fails fast
+and cleanly rather than hanging on a doomed request to Stripe's API.
 
----
-## Database Schema & Relationships
+The admin panel brings user management (listing every account, changing
+roles, activating or deactivating accounts — with a guard against an admin
+locking themselves out), full glossary term management, and blog publishing
+together in one place, with platform-wide analytics available alongside each
+admin's personal usage statistics.
 
-### 1. Users Table
-| Column       | Type       | Description |
-|-------------|-----------|-------------|
-| id          | UUID (PK) | Unique user identifier |
-| username    | String    | Username |
-| email       | String    | Unique email address |
-| password    | String    | Hashed password |
-| role        | Enum      | [Admin, Translator, User] |
-| api_key     | String    | Unique API key for developers |
-| created_at  | Timestamp | Account creation timestamp |
+## Tech stack
 
-### 2. Languages Table
-| Column       | Type       | Description |
-|-------------|-----------|-------------|
-| id          | UUID (PK) | Unique language identifier |
-| name        | String    | Language name (e.g., Swahili) |
-| code        | String    | ISO language code (e.g., sw) |
-| status      | Enum      | [High-resource, Low-resource] |
+The frontend is built with React, TypeScript, Vite, Tailwind CSS, shadcn/ui,
+React Router, TanStack Query, and Recharts for data visualization. The
+backend runs on FastAPI with async SQLAlchemy, asyncpg, Alembic, Pydantic,
+python-jose for JWTs, passlib/bcrypt for password hashing, slowapi for rate
+limiting, boto3 for S3-compatible storage, and the official Stripe SDK. The
+ML service runs FastAPI alongside Hugging Face Transformers, PyTorch, and
+SentencePiece to serve the M2M100 multilingual model, with langdetect for
+automatic source-language identification. Persistence and infrastructure are
+Postgres, Redis, and MinIO, all orchestrated locally through Docker Compose.
 
-### 3. Translations Table
-| Column       | Type       | Description |
-|-------------|-----------|-------------|
-| id          | UUID (PK) | Unique translation identifier |
-| user_id     | UUID (FK) | User who requested the translation |
-| source_lang | UUID (FK) | Source language ID |
-| target_lang | UUID (FK) | Target language ID |
-| input_text  | Text      | Original text |
-| output_text | Text      | Translated text |
-| confidence  | Float     | Translation confidence score (0-1) |
-| timestamp   | Timestamp | Request timestamp |
+## Getting started
 
-### 4. Datasets Table
-| Column       | Type       | Description |
-|-------------|-----------|-------------|
-| id          | UUID (PK) | Unique dataset identifier |
-| language_id | UUID (FK) | Associated language |
-| source_text | Text      | Original text in source language |
-| target_text | Text      | Corresponding translated text |
-| source      | String    | Dataset source (e.g., Wikipedia, Common Crawl) |
-| created_at  | Timestamp | Entry creation timestamp |
+The fastest path to a fully running stack is Docker Compose, which brings up
+Postgres, Redis, MinIO, the backend, and the ML service together:
 
-### 5. Feedback Table
-| Column       | Type       | Description |
-|-------------|-----------|-------------|
-| id          | UUID (PK) | Unique feedback identifier |
-| user_id     | UUID (FK) | User providing feedback |
-| translation_id | UUID (FK) | Associated translation |
-| rating      | Integer   | Rating score (1-5) |
-| comment     | Text      | Feedback message |
-| timestamp   | Timestamp | Feedback timestamp |
+```bash
+cd infra
+cp .env.example .env
+# edit .env — every value is optional; see the comments in that file for
+# what each one unlocks and where to get it
+docker compose up --build
+```
 
-### 6. AI Model Training Logs
-| Column         | Type       | Description |
-|---------------|-----------|-------------|
-| id            | UUID (PK) | Unique training session ID |
-| model_version | String    | NMT model version |
-| dataset_id    | UUID (FK) | Associated dataset |
-| training_time | Float     | Duration of training (hours) |
-| BLEU_score    | Float     | Model BLEU score |
-| improvements  | Text      | Notes on performance updates |
-| timestamp     | Timestamp | Training session date |
+The backend becomes available at `http://localhost:8000` (interactive API
+docs at `/docs`), and the ML service at `http://localhost:8001`. The very
+first translation request triggers a one-time model download (roughly 1.6GB
+for M2M100), which is then cached in a Docker volume for all future restarts.
 
----
-## Database Relationships
-1. **Users (1) → (M) Translations** (A user can create multiple translation requests.)  
-2. **Languages (1) → (M) Translations** (Each translation has a source and target language.)  
-3. **Users (1) → (M) Feedback** (Users can submit multiple feedback entries.)  
-4. **Translations (1) → (M) Feedback** (Each translation can receive multiple reviews.)  
-5. **Datasets (1) → (M) AI Training Logs** (Each dataset can be used in multiple training sessions.)  
+The frontend runs separately as a Vite dev server:
 
----
-## Tech Stack
-### Frontend
-- **React.js** for user interface
-- **D3.js / Chart.js** for visualization
-- **WebSockets** for real-time translation updates
+```bash
+npm install
+npm run dev
+```
 
-### Backend
-- **Python (FastAPI / Flask)** for API handling
-- **TensorFlow / PyTorch** for NMT models
-- **Hugging Face Transformers** for leveraging pre-trained models
-- **spaCy / NLTK** for natural language processing
+By default it expects the backend at `http://localhost:8000/api/v1` —
+override this via `VITE_API_BASE_URL` in a `.env.local` file if needed.
 
-### Database
-- **PostgreSQL** for structured data storage
-- **MongoDB** for handling large text datasets
-- **Redis** for caching translation results
+See `backend/README.md` and `infra/README.md` for a deeper look at
+configuration, migrations, and what each optional integration requires to
+turn on.
 
-### Infrastructure
-- **Docker** for containerization
-- **Kubernetes** for scalability
-- **AWS S3** for dataset storage
-- **Elasticsearch** for fast language searches
+## Project structure
 
----
-## Next Steps
-1. **Define MVP Scope** – Prioritize specific low-resource languages for initial implementation.
-2. **Acquire High-Quality Datasets** – Identify and collect data from reliable sources.
-3. **Develop API & UI Prototype** – Implement basic translation features.
-4. **Train Initial NMT Model** – Use transfer learning and few-shot techniques.
-5. **Evaluate & Improve** – Measure translation accuracy and refine models based on feedback.
+`src/` holds the entire frontend application — pages, components, the API
+client, and auth context. `backend/app/` holds the FastAPI application,
+organized into versioned API routes (`api/v1/routes/`), SQLAlchemy models,
+Pydantic schemas, and the dependency-injectable clients for every external
+integration (email, OAuth, Stripe, S3, Redis, the ML service). `backend/
+alembic/` holds every database migration in sequence. `ml-service/app/`
+holds the translation microservice. `infra/` holds the Docker Compose stack
+and its environment configuration. `docs/AUDIT.md` is a detailed, continually
+updated engineering log covering architecture decisions, known gaps, and a
+full history of every development phase this project has gone through.
 
----
-## Contributors
-- **Project Lead:** Benjamin Mweri Baya
+## Testing
 
-For any inquiries, feel free to reach out to us at **[b3njaminbaya@gmail.com]** or contribute to the GitHub repository.
+The backend test suite runs against an in-memory SQLite database with every
+external integration replaced by an in-process fake, so it never requires a
+running Postgres, Redis, MinIO, or ML service instance:
 
----
+```bash
+cd backend
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements-dev.txt
+python -m pytest
+```
+
+The ML service has its own independent test suite under `ml-service/tests/`,
+runnable the same way. The frontend is checked with `npm run lint` and
+`npx tsc --noEmit`, and built for production with `npm run build`.
+
+## Documentation
+
+`docs/AUDIT.md` is the authoritative source for architectural context,
+security and performance considerations, and a phase-by-phase log of what has
+been built and verified, including exactly how each feature was tested
+against real infrastructure. `backend/README.md` documents every backend
+configuration value and how each optional integration behaves when left
+unconfigured. `infra/README.md` covers the Docker Compose setup end to end.
+
+## Contributing
+
+Issues and pull requests are welcome. Please run the relevant test suite(s)
+and, for backend changes touching the database, include an Alembic migration
+before submitting.
+
 ## License
-This project is licensed under the **MIT License**.
 
+This project is licensed under the MIT License — see `LICENSE` for details.
+
+## Contact
+
+**Project Lead:** Benjamin Mweri Baya — b3njaminbaya@gmail.com

@@ -7,6 +7,7 @@ from ....billing_client import BillingError, StripeClient, get_stripe_client
 from ....core.config import settings
 from ....deps import get_current_active_user, get_db
 from ....models import APIKey, User
+from ....security import normalize_email
 
 router = APIRouter(prefix="/billing", tags=["billing"])
 
@@ -83,7 +84,9 @@ async def stripe_webhook(
 
         if customer_email and quota_limit is not None:
             user = (
-                await db.execute(select(User).where(User.email == customer_email))
+                await db.execute(
+                    select(User).where(User.email == normalize_email(customer_email))
+                )
             ).scalar_one_or_none()
             if user:
                 keys = (

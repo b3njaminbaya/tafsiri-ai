@@ -62,6 +62,54 @@ def test_me_requires_valid_token(client):
     assert bad_token.status_code == 401
 
 
+def test_login_email_is_case_insensitive(client):
+    client.post(
+        "/api/v1/auth/register",
+        json={"email": "MixedCase@Example.com", "password": "secret123"},
+    )
+    # Stored normalized to lowercase — logging in with any casing must work,
+    # since a browser (autocapitalize, autofill) may not preserve exactly
+    # what the user typed at registration.
+    resp = client.post(
+        "/api/v1/auth/login",
+        data={"username": "mixedcase@example.com", "password": "secret123"},
+    )
+    assert resp.status_code == 200
+
+    resp_upper = client.post(
+        "/api/v1/auth/login",
+        data={"username": "MIXEDCASE@EXAMPLE.COM", "password": "secret123"},
+    )
+    assert resp_upper.status_code == 200
+
+
+def test_login_email_with_stray_whitespace_still_works(client):
+    client.post(
+        "/api/v1/auth/register",
+        json={"email": "trimme@example.com", "password": "secret123"},
+    )
+    resp = client.post(
+        "/api/v1/auth/login",
+        data={"username": " trimme@example.com ", "password": "secret123"},
+    )
+    assert resp.status_code == 200
+
+
+def test_register_email_normalized_prevents_case_variant_duplicates(client):
+    first = client.post(
+        "/api/v1/auth/register",
+        json={"email": "dupecase@example.com", "password": "secret123"},
+    )
+    assert first.status_code == 200
+    assert first.json()["email"] == "dupecase@example.com"
+
+    dup = client.post(
+        "/api/v1/auth/register",
+        json={"email": "DupeCase@Example.com", "password": "secret123"},
+    )
+    assert dup.status_code == 400
+
+
 def test_update_display_name(client):
     token = register_and_login(client, "dana@example.com")
 

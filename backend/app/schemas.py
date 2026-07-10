@@ -303,3 +303,54 @@ class GlossaryTermRead(BaseModel):
 
     class Config:
         from_attributes = True
+
+BLOG_STATUSES = ("draft", "published")
+
+class BlogPostCreate(BaseModel):
+    title: str = Field(..., min_length=1, max_length=255)
+    excerpt: Optional[str] = Field(None, max_length=500)
+    body: str = Field(..., min_length=1)
+    category: Optional[str] = Field(None, max_length=64)
+    status: str = Field("draft", pattern="^(" + "|".join(BLOG_STATUSES) + ")$")
+
+class BlogPostUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=255)
+    excerpt: Optional[str] = Field(None, max_length=500)
+    body: Optional[str] = Field(None, min_length=1)
+    category: Optional[str] = Field(None, max_length=64)
+    status: Optional[str] = Field(None, pattern="^(" + "|".join(BLOG_STATUSES) + ")$")
+
+class BlogPostRead(BaseModel):
+    id: int
+    slug: str
+    title: str
+    excerpt: Optional[str]
+    category: Optional[str]
+    status: str
+    author_handle: str
+    published_at: Optional[datetime]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class BlogPostDetail(BlogPostRead):
+    body: str
+
+class AdminUserRead(BaseModel):
+    id: int
+    email: EmailStr
+    display_name: Optional[str]
+    role: Optional[RoleRead]
+    is_active: bool
+    is_verified: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+ADMIN_ASSIGNABLE_ROLES = ("user", "translator", "admin")
+
+class AdminUserUpdate(BaseModel):
+    role_name: Optional[str] = Field(None, pattern="^(" + "|".join(ADMIN_ASSIGNABLE_ROLES) + ")$")
+    is_active: Optional[bool] = None

@@ -10,6 +10,7 @@ const NavBar = () => {
   const { isAuthenticated, logout, user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const canReview = user?.role?.name === "translator" || user?.role?.name === "admin";
+  const isAdmin = user?.role?.name === "admin";
 
   const handleLogout = async () => {
     await logout();
@@ -24,6 +25,7 @@ const NavBar = () => {
     { name: "Pricing", href: "/pricing" },
     ...(isAuthenticated ? [{ name: "Analytics", href: "/analytics" }] : []),
     ...(canReview ? [{ name: "Review Queue", href: "/review" }] : []),
+    ...(isAdmin ? [{ name: "Admin", href: "/admin" }] : []),
   ];
 
   return (

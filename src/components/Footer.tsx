@@ -1,12 +1,11 @@
 import { Link } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
-import { 
-  Github, 
-  Twitter, 
-  Linkedin, 
-  Mail, 
+import {
+  Github,
+  Twitter,
+  Linkedin,
+  Mail,
   Globe,
-  FileText,
   Shield,
   HelpCircle
 } from "lucide-react";
@@ -82,10 +81,6 @@ const Footer = () => {
           <div className="space-y-4">
             <h4 className="font-semibold">Resources</h4>
             <div className="space-y-2">
-              <Link to="/documentation" className="block text-sm text-muted-foreground hover:text-primary transition-colors flex items-center">
-                <FileText className="w-4 h-4 mr-2" />
-                Documentation
-              </Link>
               <Link to="/blog" className="block text-sm text-muted-foreground hover:text-primary transition-colors flex items-center">
                 <Globe className="w-4 h-4 mr-2" />
                 Blog
@@ -107,17 +102,17 @@ const Footer = () => {
           <div className="space-y-4">
             <h4 className="font-semibold">Legal</h4>
             <div className="space-y-2">
-              <Link to="/privacy" className="block text-sm text-muted-foreground hover:text-primary transition-colors flex items-center">
+              <Link to="/privacy-policy" className="block text-sm text-muted-foreground hover:text-primary transition-colors flex items-center">
                 <Shield className="w-4 h-4 mr-2" />
                 Privacy Policy
               </Link>
-              <Link to="/terms" className="block text-sm text-muted-foreground hover:text-primary transition-colors">
+              <Link to="/terms-of-service" className="block text-sm text-muted-foreground hover:text-primary transition-colors">
                 Terms of Service
               </Link>
-              <Link to="/cookies" className="block text-sm text-muted-foreground hover:text-primary transition-colors">
+              <Link to="/cookie-policy" className="block text-sm text-muted-foreground hover:text-primary transition-colors">
                 Cookie Policy
               </Link>
-              <Link to="/gdpr" className="block text-sm text-muted-foreground hover:text-primary transition-colors">
+              <Link to="/gdpr-compliance" className="block text-sm text-muted-foreground hover:text-primary transition-colors">
                 GDPR Compliance
               </Link>
               <Link to="/security" className="block text-sm text-muted-foreground hover:text-primary transition-colors">

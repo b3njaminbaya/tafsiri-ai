@@ -30,6 +30,8 @@ import Contact from "./pages/Contact";
 import Accessibility from "./pages/Accessibility";
 import Community from "./pages/Community";
 import ForumPost from "./pages/ForumPost";
+import BlogPostDetail from "./pages/BlogPostDetail";
+import Admin from "./pages/Admin";
 import SystemStatus from "./pages/SystemStatus";
 import Blog from "./pages/Blog";
 import Support from "./pages/Support";
@@ -93,6 +95,15 @@ const App = () => (
                 <Route path="/community/posts/:postId" element={<ForumPost />} />
                 <Route path="/status" element={<SystemStatus />} />
                 <Route path="/blog" element={<Blog />} />
+                <Route path="/blog/:slug" element={<BlogPostDetail />} />
+                <Route
+                  path="/admin"
+                  element={
+                    <ProtectedRoute adminOnly>
+                      <Admin />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route path="/support" element={<Support />} />
                 <Route
                   path="/gdpr-request"
