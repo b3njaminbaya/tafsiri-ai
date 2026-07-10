@@ -28,6 +28,7 @@ export interface TranslateResponse {
   target_lang: string;
   domain?: string | null;
   confidence: number;
+  applied_glossary_terms: string[];
 }
 
 export interface TranslationRecord {
@@ -68,6 +69,53 @@ export interface DatasetUploadFields {
   target_lang?: string;
   domain?: string;
   file: File;
+}
+
+export interface CorrectionRecord {
+  id: number;
+  translation_id: number;
+  reviewer_id: number;
+  corrected_text: string;
+  note?: string | null;
+  created_at: string;
+}
+
+export interface ContributorCount {
+  handle: string;
+  count: number;
+}
+
+export interface CommunityStats {
+  total_datasets: number;
+  total_translations: number;
+  total_corrections: number;
+  total_contributors: number;
+  top_dataset_contributors: ContributorCount[];
+  top_reviewers: ContributorCount[];
+}
+
+export interface DailyCount {
+  date: string;
+  count: number;
+}
+
+export interface LanguagePairCount {
+  source_lang?: string | null;
+  target_lang: string;
+  count: number;
+}
+
+export interface RatingBreakdown {
+  rating: number;
+  count: number;
+}
+
+export interface AnalyticsSummary {
+  total_translations: number;
+  average_confidence: number;
+  translations_by_day: DailyCount[];
+  top_language_pairs: LanguagePairCount[];
+  feedback_breakdown: RatingBreakdown[];
 }
 
 class ApiError extends Error {
@@ -161,6 +209,29 @@ export const api = {
     request<{ url: string; expires_in_seconds: number }>(
       `/datasets/${datasetId}/download`
     ),
+
+  getReviewQueue: (token: string, minConfidence = 0.6) =>
+    request<TranslationRecord[]>(
+      `/review/queue?min_confidence=${minConfidence}`,
+      {},
+      token
+    ),
+
+  submitCorrection: (
+    translationId: number,
+    payload: { corrected_text: string; note?: string },
+    token: string
+  ) =>
+    request<CorrectionRecord>(
+      `/review/${translationId}/correct`,
+      { method: "POST", body: JSON.stringify(payload) },
+      token
+    ),
+
+  getCommunityStats: () => request<CommunityStats>("/community/stats"),
+
+  getAnalyticsSummary: (token: string) =>
+    request<AnalyticsSummary>("/analytics/summary", {}, token),
 };
 
 export { ApiError };

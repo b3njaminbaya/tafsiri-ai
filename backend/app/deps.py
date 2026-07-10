@@ -59,6 +59,14 @@ def require_role(role_name: str):
     return _checker
 
 
+def require_any_role(*role_names: str):
+    def _checker(current_user: User = Depends(get_current_active_user)) -> User:
+        if not current_user.role or current_user.role.name not in role_names:
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+        return current_user
+    return _checker
+
+
 def _get_api_key(
     x_api_key: Optional[str] = Header(default=None),
     db: Session = Depends(get_db),

@@ -50,6 +50,7 @@ def translate(
         target_lang=record.target_lang,
         domain=record.domain,
         confidence=record.confidence,
+        applied_glossary_terms=result.get("applied_glossary_terms", []),
     )
 
 

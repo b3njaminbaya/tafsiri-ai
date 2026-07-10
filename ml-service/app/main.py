@@ -1,10 +1,12 @@
 import logging
 import os
 import threading
-from typing import Optional
+from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
+
+from .glossary import find_glossary_terms
 
 logger = logging.getLogger("ml-service")
 logging.basicConfig(level=logging.INFO)
@@ -90,7 +92,10 @@ def _sequence_confidence(generated) -> float:
     if not getattr(generated, "scores", None):
         return 0.5
     transition_scores = _model.compute_transition_scores(
-        generated.sequences, generated.scores, normalize_logits=True
+        generated.sequences,
+        generated.scores,
+        beam_indices=getattr(generated, "beam_indices", None),
+        normalize_logits=True,
     )
     valid = transition_scores[transition_scores > -1e8]
     if valid.numel() == 0:
@@ -111,6 +116,7 @@ class TranslateResponse(BaseModel):
     source_lang: str
     target_lang: str
     confidence: float
+    applied_glossary_terms: List[str] = []
 
 
 @app.get("/health")
@@ -137,16 +143,28 @@ def translate(req: TranslateRequest):
     _tokenizer.src_lang = source_lang
     encoded = _tokenizer(req.text, return_tensors="pt")
 
+    # Domain "customization" without a training loop: force the correct
+    # domain-specific term into the output via constrained beam search rather
+    # than leaving it to chance. This is what makes the `domain` field on
+    # TranslateRequest actually change the output, instead of being stored and
+    # ignored.
+    forced_terms = find_glossary_terms(req.domain, source_lang, req.target_lang, req.text)
+    generate_kwargs = dict(
+        forced_bos_token_id=_tokenizer.get_lang_id(req.target_lang),
+        max_new_tokens=512,
+        output_scores=True,
+        return_dict_in_generate=True,
+    )
+    if forced_terms:
+        generate_kwargs["force_words_ids"] = [
+            _tokenizer(term, add_special_tokens=False).input_ids for term in forced_terms
+        ]
+        generate_kwargs["num_beams"] = 4
+
     import torch
 
     with torch.no_grad():
-        generated = _model.generate(
-            **encoded,
-            forced_bos_token_id=_tokenizer.get_lang_id(req.target_lang),
-            max_new_tokens=512,
-            output_scores=True,
-            return_dict_in_generate=True,
-        )
+        generated = _model.generate(**encoded, **generate_kwargs)
 
     output_text = _tokenizer.batch_decode(generated.sequences, skip_special_tokens=True)[0]
     confidence = _sequence_confidence(generated)
@@ -156,4 +174,5 @@ def translate(req: TranslateRequest):
         source_lang=source_lang,
         target_lang=req.target_lang,
         confidence=confidence,
+        applied_glossary_terms=forced_terms,
     )

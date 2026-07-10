@@ -7,8 +7,9 @@ import { useAuth } from "@/context/AuthContext";
 
 const NavBar = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const canReview = user?.role?.name === "translator" || user?.role?.name === "admin";
 
   const handleLogout = () => {
     logout();
@@ -21,6 +22,8 @@ const NavBar = () => {
     { name: "Translate", href: "/translate" },
     { name: "API Docs", href: "/api-docs" },
     { name: "Pricing", href: "/pricing" },
+    ...(isAuthenticated ? [{ name: "Analytics", href: "/analytics" }] : []),
+    ...(canReview ? [{ name: "Review Queue", href: "/review" }] : []),
   ];
 
   return (

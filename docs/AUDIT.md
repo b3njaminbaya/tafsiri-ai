@@ -167,3 +167,44 @@ Following the same discipline as Phase 0 (verify live, don't just read the code)
 - Dataset upload has no format validation (accepts any file) and no domain-adapter training loop consumes uploaded datasets yet — they're stored and browsable, not yet used to improve the model.
 - JWT still lives in `localStorage`; GDPR/privacy-dashboard pages are still cosmetic. Both remain explicitly deferred, not forgotten.
 - `ApiDocs.tsx` still advertises endpoints (`/batch`, `/models`) and a domain (`api.nmtplatform.com`) that don't exist — worth a pass once the batch-translation and model-listing endpoints are actually built.
+
+---
+
+## Phase 2 progress log (2026-07-10)
+
+Phase 2 targeted the roadmap's differentiation items: an active-learning review queue, domain adapters, contributor attribution, and real analytics — the features that separate this from a generic translation API wrapper.
+
+### Domain adapters (without a training loop)
+
+Real per-domain fine-tuned adapters (LoRA or otherwise) need labeled training data and a training pipeline this project doesn't have yet — building that wasn't honest to claim as "done" in one pass. Instead, `domain` now does something real: **terminology-constrained decoding**. `ml-service/app/glossary.py` holds a curated per-domain glossary (medical/legal/technical × a few language pairs); when a glossary term appears in the input, its correct target-language rendering is forced into the output via `transformers`' `force_words_ids` constrained beam search (`num_beams=4`). This is a genuine, well-established MT technique, not a placeholder — and it's directly testable regardless of model quality, since constrained decoding *guarantees* the forced phrase appears in the output. The response now includes `applied_glossary_terms` so the effect is observable, not just internal.
+
+### Active-learning review queue
+
+- New `Correction` model (migration `0004`) and `/review/queue` + `/review/{id}/correct` endpoints, gated to `translator`/`admin` roles via a new `require_any_role` dependency.
+- The queue surfaces translations below a confidence threshold (default 0.6) that don't already have a correction, ordered lowest-confidence-first — the actual "active learning" prioritization: reviewer time goes to the translations that most need it.
+- This is also the first real use of the `translator` role, which existed since the Phase 0 migration (and the `/auth/promote/{id}` endpoint that grants it) but had no purpose in the app until now.
+- Frontend: a new `/review` page, visible in the nav only to translator/admin accounts, showing the queue with an inline correction textarea.
+
+### Contributor attribution
+
+- New public `GET /community/stats` endpoint: real counts (datasets, translations, corrections, distinct contributors) and top-contributor leaderboards for dataset uploads and review corrections.
+- Privacy note: since there's no dedicated username/display-name field yet, only the email's local-part is shown publicly (not the full address) — a deliberate interim choice, not an oversight, given this endpoint is unauthenticated.
+- `Community.tsx`'s "Community Stats" and "Top Contributors" cards now show this real data instead of fabricated numbers (12,847 members, etc.). Its discussion-forum section (categories, threads, replies) is a separate, genuinely large feature — a real forum backend — that Phase 2's roadmap didn't call for and this pass didn't attempt; it's still mock content, left as such rather than silently "fixed."
+
+### Real analytics
+
+- New `GET /analytics/summary` endpoint: total translations, average confidence, translations-by-day, top language pairs, and feedback rating distribution — all scoped to the current user's own history.
+- Aggregation is done in Python rather than with DB-side date-truncation SQL, after `CAST(... AS DATE)` hit a genuine SQLite/SQLAlchemy result-processing bug in testing (`TypeError: fromisoformat: argument must be str`) that doesn't have a clean cross-database fix at the SQLAlchemy-generic-type level. At the scale of one user's translation history this is simple, correct, and fast; worth revisiting with DB-side aggregation only if this needs to summarize across all users at scale.
+- Frontend: new `/analytics` page using Recharts (finally — it was an installed, unused dependency since before Phase 0). Followed the project's dataviz procedure: since every chart here is single-series magnitude data (counts by day, by language pair, by rating) rather than multi-category identity, the correct choice was one sequential hue, not a categorical palette — reused the app's existing `--brand` token rather than inventing new colors.
+
+### Testing
+
+40 backend tests (up from 28), 10 ml-service tests (up from 5, including a test that forcing a glossary term actually appears in output — true regardless of model quality, which is what makes it meaningful with the tiny test checkpoint). All new endpoints follow the same tested patterns as Phase 1: real SQL against SQLite, dependency-injected fakes for ml-service/S3 where needed.
+
+### What's still open after Phase 2
+
+- Corrections aren't yet fed back into any retraining/fine-tuning loop — they're captured and queryable, not yet used to improve the model. That's the natural next step once a training pipeline exists.
+- The glossary is small and hand-curated (a handful of terms, three domains, four language pairs) — proves the mechanism, not a production terminology database.
+- No dedicated username/display-name field — community attribution uses email local-parts as a stand-in.
+- The Community page's discussion forum remains entirely mock; a real one is a distinct feature, not attempted here.
+- Analytics are personal-only; there's no admin/global view across all users yet.

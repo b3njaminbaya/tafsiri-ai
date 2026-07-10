@@ -81,3 +81,19 @@ class Dataset(Base):
     created_at = Column(DateTime, default=_utcnow, nullable=False)
 
     uploaded_by = relationship("User")
+
+class Correction(Base):
+    """A reviewer-submitted correction for a low-confidence translation —
+    the active-learning review queue's output. Reviewing is restricted to
+    the translator/admin roles (see require_any_role in deps.py).
+    """
+    __tablename__ = "corrections"
+    id = Column(Integer, primary_key=True, index=True)
+    translation_id = Column(Integer, ForeignKey("translations.id"), nullable=False, index=True)
+    reviewer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    corrected_text = Column(Text, nullable=False)
+    note = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+    translation = relationship("Translation")
+    reviewer = relationship("User")

@@ -57,6 +57,7 @@ class TranslateResponse(BaseModel):
     target_lang: str
     domain: Optional[str] = None
     confidence: float
+    applied_glossary_terms: List[str] = []
 
 class TranslationRead(BaseModel):
     id: int
@@ -102,3 +103,50 @@ class DatasetRead(BaseModel):
 class DatasetDownloadResponse(BaseModel):
     url: str
     expires_in_seconds: int
+
+class CorrectionCreate(BaseModel):
+    corrected_text: str = Field(..., min_length=1, max_length=5000)
+    note: Optional[str] = Field(None, max_length=2000)
+
+class CorrectionRead(BaseModel):
+    id: int
+    translation_id: int
+    reviewer_id: int
+    corrected_text: str
+    note: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ContributorCount(BaseModel):
+    handle: str
+    count: int
+
+class CommunityStats(BaseModel):
+    total_datasets: int
+    total_translations: int
+    total_corrections: int
+    total_contributors: int
+    top_dataset_contributors: List[ContributorCount]
+    top_reviewers: List[ContributorCount]
+
+class DailyCount(BaseModel):
+    date: str
+    count: int
+
+class LanguagePairCount(BaseModel):
+    source_lang: Optional[str]
+    target_lang: str
+    count: int
+
+class RatingBreakdown(BaseModel):
+    rating: int
+    count: int
+
+class AnalyticsSummary(BaseModel):
+    total_translations: int
+    average_confidence: float
+    translations_by_day: List[DailyCount]
+    top_language_pairs: List[LanguagePairCount]
+    feedback_breakdown: List[RatingBreakdown]

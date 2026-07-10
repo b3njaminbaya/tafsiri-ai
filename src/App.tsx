@@ -12,6 +12,8 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Translate from "./pages/Translate";
+import Review from "./pages/Review";
+import Analytics from "./pages/Analytics";
 import Features from "./pages/Features";
 import ApiDocs from "./pages/ApiDocs";
 import Pricing from "./pages/Pricing";
@@ -50,6 +52,22 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <Translate />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/review"
+                  element={
+                    <ProtectedRoute>
+                      <Review />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/analytics"
+                  element={
+                    <ProtectedRoute>
+                      <Analytics />
                     </ProtectedRoute>
                   }
                 />

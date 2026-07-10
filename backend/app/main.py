@@ -5,8 +5,11 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from .core.config import settings
 from .core.limiter import limiter
+from .api.v1.routes import analytics as analytics_routes
 from .api.v1.routes import auth as auth_routes
+from .api.v1.routes import community as community_routes
 from .api.v1.routes import datasets as datasets_routes
+from .api.v1.routes import review as review_routes
 from .api.v1.routes import translate as translate_routes
 
 tags_metadata = [
@@ -21,6 +24,18 @@ tags_metadata = [
     {
         "name": "datasets",
         "description": "Upload and browse parallel-corpus datasets, stored in MinIO/S3.",
+    },
+    {
+        "name": "review",
+        "description": "Active-learning review queue for low-confidence translations (translator/admin roles).",
+    },
+    {
+        "name": "community",
+        "description": "Public community contribution stats and leaderboards.",
+    },
+    {
+        "name": "analytics",
+        "description": "Personal translation analytics for the current user.",
     },
 ]
 
@@ -51,4 +66,7 @@ api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(auth_routes.router)
 api_router.include_router(translate_routes.router)
 api_router.include_router(datasets_routes.router)
+api_router.include_router(review_routes.router)
+api_router.include_router(community_routes.router)
+api_router.include_router(analytics_routes.router)
 app.include_router(api_router)

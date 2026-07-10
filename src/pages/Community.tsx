@@ -1,10 +1,17 @@
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MessageSquare, Users, Heart, Star, TrendingUp, Clock, Pin } from "lucide-react";
+import { MessageSquare, Users, Heart, Star, TrendingUp, Clock, Pin, Database, Languages, PenLine } from "lucide-react";
+import { api, type CommunityStats } from "@/lib/api";
 
 const Community = () => {
+  const [stats, setStats] = useState<CommunityStats | null>(null);
+
+  useEffect(() => {
+    api.getCommunityStats().then(setStats).catch(() => setStats(null));
+  }, []);
   const forumCategories = [
     {
       name: "General Discussion",
@@ -84,13 +91,6 @@ const Community = () => {
       time: "1 day ago",
       pinned: false
     }
-  ];
-
-  const topContributors = [
-    { name: "Sarah Chen", posts: 156, likes: 892, badge: "Expert" },
-    { name: "Michael Rodriguez", posts: 134, likes: 743, badge: "Helper" },
-    { name: "Dr. Emma Wilson", posts: 98, likes: 654, badge: "Researcher" },
-    { name: "Alex Johnson", posts: 87, likes: 432, badge: "Developer" }
   ];
 
   return (
@@ -177,24 +177,25 @@ const Community = () => {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Community Stats</CardTitle>
+              <CardTitle className="text-lg">Community Impact</CardTitle>
+              <CardDescription>Real activity on this platform — not a projection.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex justify-between">
-                <span>Total Members</span>
-                <span className="font-semibold">12,847</span>
+              <div className="flex justify-between items-center">
+                <span className="flex items-center gap-2"><Database className="h-4 w-4" /> Datasets contributed</span>
+                <span className="font-semibold">{stats?.total_datasets ?? "—"}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Total Posts</span>
-                <span className="font-semibold">3,285</span>
+              <div className="flex justify-between items-center">
+                <span className="flex items-center gap-2"><Languages className="h-4 w-4" /> Translations served</span>
+                <span className="font-semibold">{stats?.total_translations ?? "—"}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Active Today</span>
-                <span className="font-semibold">456</span>
+              <div className="flex justify-between items-center">
+                <span className="flex items-center gap-2"><PenLine className="h-4 w-4" /> Corrections submitted</span>
+                <span className="font-semibold">{stats?.total_corrections ?? "—"}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Questions Answered</span>
-                <span className="font-semibold">2,891</span>
+              <div className="flex justify-between items-center">
+                <span className="flex items-center gap-2"><Users className="h-4 w-4" /> Active contributors</span>
+                <span className="font-semibold">{stats?.total_contributors ?? "—"}</span>
               </div>
             </CardContent>
           </Card>
@@ -203,23 +204,43 @@ const Community = () => {
             <CardHeader>
               <CardTitle className="text-lg">Top Contributors</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {topContributors.map((contributor, index) => (
-                <div key={index} className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-semibold">
-                    {index + 1}
+            <CardContent className="space-y-5">
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Dataset uploads</p>
+                {stats && stats.top_dataset_contributors.length > 0 ? (
+                  <div className="space-y-2">
+                    {stats.top_dataset_contributors.map((c, index) => (
+                      <div key={c.handle} className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-semibold">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1 font-medium text-sm">{c.handle}</div>
+                        <Badge variant="outline" className="text-xs">{c.count}</Badge>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex-1">
-                    <div className="font-medium">{contributor.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {contributor.posts} posts • {contributor.likes} likes
-                    </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No datasets uploaded yet.</p>
+                )}
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Review corrections</p>
+                {stats && stats.top_reviewers.length > 0 ? (
+                  <div className="space-y-2">
+                    {stats.top_reviewers.map((c, index) => (
+                      <div key={c.handle} className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-semibold">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1 font-medium text-sm">{c.handle}</div>
+                        <Badge variant="outline" className="text-xs">{c.count}</Badge>
+                      </div>
+                    ))}
                   </div>
-                  <Badge variant="outline" className="text-xs">
-                    {contributor.badge}
-                  </Badge>
-                </div>
-              ))}
+                ) : (
+                  <p className="text-sm text-muted-foreground">No corrections submitted yet.</p>
+                )}
+              </div>
             </CardContent>
           </Card>
 
