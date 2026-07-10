@@ -9,10 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import { Languages, ArrowRight, Copy, Volume2, RotateCcw, Sparkles, Clock, CheckCircle } from "lucide-react";
-
-const API_BASE = "http://localhost:8000/api/v1";
+import { useAuth } from "@/context/AuthContext";
+import { api, ApiError } from "@/lib/api";
 
 const Translate = () => {
+  const { token } = useAuth();
   const [text, setText] = useState("");
   const [sourceLanguage, setSourceLanguage] = useState("auto");
   const [targetLanguage, setTargetLanguage] = useState("en");
@@ -65,28 +66,19 @@ const Translate = () => {
   };
 
   const runTranslate = async () => {
-    const token = localStorage.getItem("token");
     if (!token) {
       toast({ title: "Please log in" });
       return;
     }
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/translate/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ text, target_lang: targetLanguage, domain }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
+      const data = await api.translate({ text, target_lang: targetLanguage, domain }, token);
       setOutput(data.translation);
       setConfidence(data.confidence);
-      setDetectedLanguage(data.source_lang);
+      setDetectedLanguage(data.source_lang ?? null);
     } catch (err) {
-      toast({ title: "Error", description: String(err) });
+      const description = err instanceof ApiError ? err.message : String(err);
+      toast({ title: "Error", description });
     } finally {
       setLoading(false);
     }

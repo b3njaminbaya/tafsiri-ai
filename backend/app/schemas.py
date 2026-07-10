@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
 from datetime import datetime
 
@@ -45,10 +45,10 @@ class APIKeyCreateResponse(BaseModel):
     api_key: APIKeyRead
 
 class TranslateRequest(BaseModel):
-    text: str
-    source_lang: Optional[str] = None
-    target_lang: str
-    domain: Optional[str] = None
+    text: str = Field(..., min_length=1, max_length=5000)
+    source_lang: Optional[str] = Field(None, max_length=16)
+    target_lang: str = Field(..., max_length=16)
+    domain: Optional[str] = Field(None, max_length=32)
 
 class TranslateResponse(BaseModel):
     translation: str

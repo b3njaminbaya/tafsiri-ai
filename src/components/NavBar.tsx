@@ -3,14 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, Globe, Brain } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 const NavBar = () => {
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
+  const { isAuthenticated, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    logout();
     navigate("/login");
     setIsOpen(false);
   };
@@ -48,7 +49,7 @@ const NavBar = () => {
 
         {/* Desktop Auth Buttons */}
         <div className="hidden md:flex items-center space-x-3">
-          {token ? (
+          {isAuthenticated ? (
             <Button variant="outline" onClick={handleLogout}>
               Logout
             </Button>
@@ -98,7 +99,7 @@ const NavBar = () => {
               </nav>
 
               <div className="flex flex-col space-y-3 pt-4 border-t">
-                {token ? (
+                {isAuthenticated ? (
                   <Button variant="outline" onClick={handleLogout} className="w-full">
                     Logout
                   </Button>

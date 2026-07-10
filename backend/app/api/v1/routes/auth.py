@@ -1,28 +1,22 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from secrets import token_urlsafe
 
-from ... import schemas
-from ...database import Base, engine
-from ...models import User, Role, APIKey
-from ...security import get_password_hash, verify_password, create_access_token
-from ...deps import get_db, get_current_active_user, require_role
+from .... import schemas
+from ....models import User, Role, APIKey
+from ....security import get_password_hash, verify_password, create_access_token
+from ....deps import get_db, get_current_active_user, require_role
+from ....core.limiter import limiter
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-@router.on_event("startup")
-def ensure_roles():
-    # Ensure tables and default roles exist when router starts
-    Base.metadata.create_all(bind=engine)
-    with Session(bind=engine) as db:
-        for r in ["admin", "translator", "user"]:
-            if not db.query(Role).filter(Role.name == r).first():
-                db.add(Role(name=r))
-        db.commit()
+# Default roles (admin/translator/user) are seeded by the initial Alembic
+# migration (20260710_0001_initial_schema) — not created at request time.
 
 @router.post("/register", response_model=schemas.UserRead, summary="Register with email/password")
-def register(user_in: schemas.UserCreate, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def register(request: Request, user_in: schemas.UserCreate, db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == user_in.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
     default_role = db.query(Role).filter(Role.name == "user").first()
@@ -37,7 +31,8 @@ def register(user_in: schemas.UserCreate, db: Session = Depends(get_db)):
     return user
 
 @router.post("/login", response_model=schemas.Token, summary="Obtain JWT access token")
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")

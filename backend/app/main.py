@@ -1,7 +1,10 @@
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from .core.config import settings
-from .database import Base, engine
+from .core.limiter import limiter
 from .api.v1.routes import auth as auth_routes
 from .api.v1.routes import translate as translate_routes
 
@@ -25,21 +28,20 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=settings.cors_origin_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Create tables at startup (simple bootstrap, replace with Alembic migrations later)
-@app.on_event("startup")
-def on_startup():
-    Base.metadata.create_all(bind=engine)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
-api_v1 = FastAPI()
+# Schema is managed by Alembic — run `alembic upgrade head` before starting the app
+# (see backend/README.md). No create_all() here; migrations are the single source
+# of truth for table structure.
 
-# Mount v1 routers
-from fastapi import APIRouter
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(auth_routes.router)
 api_router.include_router(translate_routes.router)

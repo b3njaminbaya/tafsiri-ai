@@ -1,47 +1,39 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-
-const API_BASE = "http://localhost:8000/api/v1";
+import { useAuth } from "@/context/AuthContext";
 
 const Login = () => {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login, register } = useAuth();
+
+  const redirectTo = (location.state as { from?: { pathname: string } })?.from?.pathname ?? "/translate";
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       if (mode === "signup") {
-        const res = await fetch(`${API_BASE}/auth/register`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        });
-        if (!res.ok) throw new Error(await res.text());
+        await register(email, password);
         toast({ title: "Account created", description: "You can now log in." });
         setMode("login");
         return;
       }
-      const form = new URLSearchParams();
-      form.set("username", email);
-      form.set("password", password);
-      const res = await fetch(`${API_BASE}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: form.toString(),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
-      localStorage.setItem("token", data.access_token);
+      await login(email, password);
       toast({ title: "Welcome", description: "Logged in successfully." });
-      navigate("/translate");
+      navigate(redirectTo, { replace: true });
     } catch (err) {
       toast({ title: "Error", description: String(err) });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -60,8 +52,8 @@ const Login = () => {
               <Label htmlFor="password">Password</Label>
               <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
             </div>
-            <Button type="submit" className="w-full">
-              {mode === "login" ? "Log in" : "Sign up"}
+            <Button type="submit" className="w-full" disabled={submitting}>
+              {submitting ? "Please wait..." : mode === "login" ? "Log in" : "Sign up"}
             </Button>
           </form>
           <div className="flex items-center justify-between mt-4 text-sm">

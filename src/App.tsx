@@ -3,9 +3,11 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/context/AuthContext";
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
 import CookieConsent from "@/components/CookieConsent";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
@@ -32,43 +34,52 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <div className="flex flex-col min-h-screen">
-          <NavBar />
-          <main className="flex-1">
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/translate" element={<Translate />} />
-              <Route path="/features" element={<Features />} />
-              <Route path="/api-docs" element={<ApiDocs />} />
-              <Route path="/pricing" element={<Pricing />} />
-              <Route path="/datasets" element={<Datasets />} />
-              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-              <Route path="/terms-of-service" element={<TermsOfService />} />
-              <Route path="/cookie-policy" element={<CookiePolicy />} />
-              <Route path="/gdpr-compliance" element={<GdprCompliance />} />
-              <Route path="/security" element={<Security />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/accessibility" element={<Accessibility />} />
-              <Route path="/community" element={<Community />} />
-              <Route path="/status" element={<SystemStatus />} />
-              <Route path="/blog" element={<Blog />} />
-              <Route path="/support" element={<Support />} />
-              <Route path="/gdpr-request" element={<GdprRequest />} />
-              <Route path="/privacy-settings" element={<PrivacySettings />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </main>
-          <Footer />
-        </div>
-        <CookieConsent />
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <div className="flex flex-col min-h-screen">
+            <NavBar />
+            <main className="flex-1">
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/login" element={<Login />} />
+                <Route
+                  path="/translate"
+                  element={
+                    <ProtectedRoute>
+                      <Translate />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path="/features" element={<Features />} />
+                <Route path="/api-docs" element={<ApiDocs />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/datasets" element={<Datasets />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="/terms-of-service" element={<TermsOfService />} />
+                <Route path="/cookie-policy" element={<CookiePolicy />} />
+                <Route path="/gdpr-compliance" element={<GdprCompliance />} />
+                <Route path="/security" element={<Security />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/accessibility" element={<Accessibility />} />
+                <Route path="/community" element={<Community />} />
+                <Route path="/status" element={<SystemStatus />} />
+                <Route path="/blog" element={<Blog />} />
+                <Route path="/support" element={<Support />} />
+                <Route path="/gdpr-request" element={<GdprRequest />} />
+                <Route path="/privacy-settings" element={<PrivacySettings />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </main>
+            <Footer />
+          </div>
+          <CookieConsent />
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
