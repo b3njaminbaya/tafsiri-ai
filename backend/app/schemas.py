@@ -51,8 +51,54 @@ class TranslateRequest(BaseModel):
     domain: Optional[str] = Field(None, max_length=32)
 
 class TranslateResponse(BaseModel):
+    id: int
     translation: str
     source_lang: Optional[str] = None
     target_lang: str
     domain: Optional[str] = None
     confidence: float
+
+class TranslationRead(BaseModel):
+    id: int
+    source_lang: Optional[str]
+    target_lang: str
+    domain: Optional[str]
+    input_text: str
+    output_text: str
+    confidence: float
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class FeedbackCreate(BaseModel):
+    rating: int = Field(..., ge=1, le=5)
+    comment: Optional[str] = Field(None, max_length=2000)
+
+class FeedbackRead(BaseModel):
+    id: int
+    translation_id: int
+    rating: int
+    comment: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class DatasetRead(BaseModel):
+    id: int
+    name: str
+    description: Optional[str]
+    source_lang: Optional[str]
+    target_lang: Optional[str]
+    domain: Optional[str]
+    size_bytes: int
+    uploaded_by_id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class DatasetDownloadResponse(BaseModel):
+    url: str
+    expires_in_seconds: int

@@ -14,9 +14,49 @@ os.environ.setdefault("SECRET_KEY", "test-secret")
 
 from app.database import Base
 from app.deps import get_db
+from app.ml_client import get_ml_client
 from app.models import Role, User
 from app.main import app
 from app.core.limiter import limiter
+from app.storage import get_s3_client, get_s3_public_client
+
+
+class FakeMLClient:
+    """In-process stand-in for ml-service, so tests exercise the real
+    persistence/history/feedback logic without needing a model loaded or a
+    network call to a running ml-service.
+    """
+
+    def translate(self, text: str, target_lang: str, source_lang=None, domain=None) -> dict:
+        return {
+            "translation": f"[{target_lang}] {text[::-1]}",
+            "source_lang": source_lang or "en",
+            "confidence": 0.87,
+        }
+
+
+class FakeS3Client:
+    """In-memory stand-in for boto3's S3 client — same rationale as
+    FakeMLClient: exercises the real upload/list/download logic without a
+    running MinIO instance.
+    """
+
+    def __init__(self):
+        self.objects: dict[tuple[str, str], bytes] = {}
+
+    def put_object(self, Bucket: str, Key: str, Body: bytes) -> None:
+        self.objects[(Bucket, Key)] = Body
+
+    def generate_presigned_url(self, operation: str, Params: dict, ExpiresIn: int) -> str:
+        bucket, key = Params["Bucket"], Params["Key"]
+        return f"http://fake-s3.local/{bucket}/{key}?expires={ExpiresIn}"
+
+
+_fake_s3 = FakeS3Client()
+
+app.dependency_overrides[get_ml_client] = lambda: FakeMLClient()
+app.dependency_overrides[get_s3_client] = lambda: _fake_s3
+app.dependency_overrides[get_s3_public_client] = lambda: _fake_s3
 
 engine = create_engine(
     "sqlite:///:memory:",

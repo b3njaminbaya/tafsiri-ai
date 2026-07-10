@@ -1,0 +1,11 @@
+# torch is split into its own file (requirements-torch.txt) so the Dockerfile
+# can install it as its own build layer — it's by far the largest download
+# here, and giving it a dedicated layer means Docker's build cache preserves
+# it independently of the smaller packages below.
+-r requirements-torch.txt
+
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+transformers==4.42.4
+sentencepiece==0.2.0
+langdetect==1.0.9

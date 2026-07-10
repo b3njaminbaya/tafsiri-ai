@@ -122,3 +122,48 @@ The unit test suite runs against SQLite and mocks nothing about the app itself, 
 After all four fixes, the full stack was verified live end-to-end: `docker compose up --build`, then `curl` against the running containers for register → login → `/translate` with a JWT, `/translate` with a freshly-issued `X-API-Key` header (the new quota-enforced path), and a CORS preflight check — all confirmed working, then torn down cleanly with `docker compose down`.
 
 Also fixed while touching this code: added non-root `USER appuser` to both Dockerfiles (previously ran as root).
+
+---
+
+## Phase 1 progress log (2026-07-10)
+
+Phase 1 targeted the three items the roadmap called out as "turn the storefront into a product": a real translation model, persistence for translations/feedback, and real dataset ingestion.
+
+### Real model wiring
+
+- `ml-service` now wraps a genuine Hugging Face multilingual model instead of only answering `/health`. Chose **M2M100** (`facebook/m2m100_418M`) over NLLB-200: both are legitimate many-to-many models with strong low-resource coverage, but M2M100's tokenizer speaks plain ISO codes (`sw`, `am`, `ha`, `yo`, `zu`, ...) that already match what the rest of this app uses everywhere, where NLLB-200 would need a FLORES-200 mapping table (`swh_Latn`, ...) for no immediate benefit.
+- `GET /languages` now returns a curated, deliberately low-resource-heavy language list (Swahili, Amharic, Hausa, Igbo, Yoruba, Zulu, Xhosa, Somali, Lingala, Wolof, Fulah, Ganda, alongside the common ones) — this is the actual product differentiator, not a demo dropdown.
+- `confidence` is now a real geometric-mean token probability computed from the model's own generation scores (`model.compute_transition_scores`), replacing the hardcoded `0.42`.
+- Missing `source_lang` (or `"auto"`) is resolved via `langdetect` rather than echoed back unchanged.
+- The backend's `/translate` route now calls `ml-service` over HTTP through a small injectable `MLServiceClient` (`app/ml_client.py`) instead of doing the placeholder logic in-process. Tests override this dependency with an in-process fake, so the 28-test backend suite runs in ~12 seconds with no model or network dependency.
+- **Verification approach:** downloading the real ~1.6GB `facebook/m2m100_418M` checkpoint for every test run (locally or in CI) would be slow and wasteful. Instead, `valhalla/m2m100_tiny_random` — a public, few-MB checkpoint sharing the exact same architecture/tokenizer classes — verifies the entire tokenize → generate → decode → confidence pipeline for real (its translations are gibberish, since the weights are random, but the code path is identical to production). This is what both `ml-service`'s own 5-test suite and its new CI job use.
+
+### Persistence
+
+- Added `Translation` and `Feedback` tables (Alembic migrations `0002`, `0003` — the latter also adds `Dataset`). Every `/translate` call now persists a row; nothing was recorded before.
+- Added `GET /translate/history` (current user's past translations, most recent first) and `POST /translate/{id}/feedback` (1-5 rating + optional comment, restricted to the translation's own requester — there's no reviewer/moderation flow yet, a reasonable v2 scope item).
+- `TranslateResponse` now includes the translation's `id`, so the frontend can attach feedback to the specific translation that produced it.
+
+### Dataset ingestion
+
+- Added a `Dataset` model + MinIO-backed storage client (`app/storage.py`, using `boto3` against MinIO's S3-compatible API — the buckets docker-compose already created but nothing touched).
+- `POST /api/v1/datasets/` accepts a real multipart file upload (50MB cap), stores it in MinIO, and records metadata (name, description, language pair, domain, size, uploader). `GET /api/v1/datasets/` lists real records. `GET /api/v1/datasets/{id}/download` returns a presigned URL — deliberately generated via a *separate* "public" S3 client/endpoint setting (`MINIO_PUBLIC_URL`) from the one the backend uses internally (`MINIO_ENDPOINT_URL`), since a presigned URL built against the internal container-network hostname would be unreachable from a browser.
+- Frontend: `Datasets.tsx` no longer shows six hardcoded cards with fabricated download counts and quality scores — it fetches the real list, supports real upload (gated behind login), and downloads via the presigned URL. `Translate.tsx` now captures the real translation `id` and lets a user thumbs-up/thumbs-down the result, calling the new feedback endpoint.
+- Backend tests use an in-memory fake S3 client (same override-a-dependency pattern as the ML client) so the 28-test suite doesn't need a running MinIO.
+
+### Verification: what was actually confirmed, and one honest gap
+
+Following the same discipline as Phase 0 (verify live, don't just read the code), the goal was to boot the *entire* stack via `docker compose up --build` with the real production model and prove register → login → `/translate` end-to-end. That didn't fully succeed, and it's worth being precise about why, rather than quietly downgrading the claim:
+
+- `docker compose build` repeatedly failed downloading large packages (PyTorch wheels, then a package-hash mismatch after ~700s) — a networking/proxy issue specific to this development sandbox's Docker build path, not a problem with the Dockerfiles or requirements. Mitigated by splitting `torch` into its own layer (`requirements-torch.txt`) and adding `pip install --retries 10 --timeout 120`, which is a genuine improvement either way (isolates the biggest, flakiest download into its own cached layer) but didn't fully resolve it here.
+- To route around the Docker build issue, the same verification was attempted directly on the host: `ml-service` was run with `MODEL_NAME=facebook/m2m100_418M` in a real venv (the exact dependency versions from `requirements.txt`, successfully installed), and the backend was pointed at it (SQLite instead of Postgres, to isolate the model download as the only remaining variable). Register, login, and `GET /datasets/` all worked correctly against this real setup.
+- The `/translate` call itself stalled: the first request triggers a lazy download of the 1.6GB model weights, and that download hung indefinitely at ~46MB. Root cause, confirmed directly: **this sandbox's DNS can resolve `huggingface.co` (small API/metadata calls work fine) but cannot resolve `cdn-lfs.huggingface.co`** — the separate CDN host Hugging Face uses to actually serve large Git-LFS-backed model weight files. `nslookup cdn-lfs.huggingface.co` returns no answer. This is an environment-level network restriction, not a code defect, and it plausibly explains the earlier Docker package-hash corruption too (large binary transfers being the common factor in every failure today).
+
+**What this means concretely:** the tokenize → generate → decode → confidence pipeline is verified for real, twice over — once via `ml-service`'s own pytest suite and once via live HTTP calls (`/health`, `/languages`, `/translate` with both explicit and auto-detected source language) — all against `valhalla/m2m100_tiny_random`, which shares the production model's exact architecture and tokenizer classes. What is *not* yet verified in this environment is the production checkpoint's actual translation quality end-to-end, purely because its weights could not be downloaded here. Anyone running `docker compose up --build` (or the host verification steps above) from a network without this specific CDN restriction should expect it to work — nothing in the code path differs between the tiny and production checkpoints besides the model name.
+
+### What's still open after Phase 1
+
+- Feedback is self-only (a user can only rate their own translations) — no reviewer/moderation workflow yet (Phase 2: active-learning queue keyed off confidence, per the roadmap).
+- Dataset upload has no format validation (accepts any file) and no domain-adapter training loop consumes uploaded datasets yet — they're stored and browsable, not yet used to improve the model.
+- JWT still lives in `localStorage`; GDPR/privacy-dashboard pages are still cosmetic. Both remain explicitly deferred, not forgotten.
+- `ApiDocs.tsx` still advertises endpoints (`/batch`, `/models`) and a domain (`api.nmtplatform.com`) that don't exist — worth a pass once the batch-translation and model-listing endpoints are actually built.

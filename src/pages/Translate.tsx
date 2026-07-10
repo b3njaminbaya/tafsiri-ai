@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
-import { Languages, ArrowRight, Copy, Volume2, RotateCcw, Sparkles, Clock, CheckCircle } from "lucide-react";
+import { Languages, ArrowRight, Copy, Volume2, RotateCcw, Sparkles, Clock, CheckCircle, ThumbsUp, ThumbsDown } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { api, ApiError } from "@/lib/api";
 
@@ -22,6 +22,9 @@ const Translate = () => {
   const [confidence, setConfidence] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [detectedLanguage, setDetectedLanguage] = useState<string | null>(null);
+  const [translationId, setTranslationId] = useState<number | null>(null);
+  const [feedbackRating, setFeedbackRating] = useState<number | null>(null);
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
 
   const commonLanguages = [
     { code: "auto", name: "Auto-detect", flag: "🌐" },
@@ -38,6 +41,17 @@ const Translate = () => {
     { code: "ar", name: "Arabic", flag: "🇸🇦" },
     { code: "hi", name: "Hindi", flag: "🇮🇳" },
     { code: "sw", name: "Swahili", flag: "🇹🇿" },
+    { code: "am", name: "Amharic", flag: "🇪🇹" },
+    { code: "ha", name: "Hausa", flag: "🇳🇬" },
+    { code: "ig", name: "Igbo", flag: "🇳🇬" },
+    { code: "yo", name: "Yoruba", flag: "🇳🇬" },
+    { code: "zu", name: "Zulu", flag: "🇿🇦" },
+    { code: "xh", name: "Xhosa", flag: "🇿🇦" },
+    { code: "so", name: "Somali", flag: "🇸🇴" },
+    { code: "ln", name: "Lingala", flag: "🇨🇩" },
+    { code: "wo", name: "Wolof", flag: "🇸🇳" },
+    { code: "ff", name: "Fulah", flag: "🇸🇳" },
+    { code: "lg", name: "Ganda", flag: "🇺🇬" },
   ];
 
   const copyToClipboard = async (text: string) => {
@@ -63,6 +77,8 @@ const Translate = () => {
     setOutput("");
     setConfidence(null);
     setDetectedLanguage(null);
+    setTranslationId(null);
+    setFeedbackRating(null);
   };
 
   const runTranslate = async () => {
@@ -72,15 +88,32 @@ const Translate = () => {
     }
     try {
       setLoading(true);
+      setFeedbackRating(null);
       const data = await api.translate({ text, target_lang: targetLanguage, domain }, token);
       setOutput(data.translation);
       setConfidence(data.confidence);
       setDetectedLanguage(data.source_lang ?? null);
+      setTranslationId(data.id);
     } catch (err) {
       const description = err instanceof ApiError ? err.message : String(err);
       toast({ title: "Error", description });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const submitFeedback = async (rating: number) => {
+    if (!token || !translationId || submittingFeedback) return;
+    try {
+      setSubmittingFeedback(true);
+      await api.submitFeedback(translationId, { rating }, token);
+      setFeedbackRating(rating);
+      toast({ title: "Thanks for the feedback!" });
+    } catch (err) {
+      const description = err instanceof ApiError ? err.message : String(err);
+      toast({ title: "Couldn't submit feedback", description });
+    } finally {
+      setSubmittingFeedback(false);
     }
   };
 
@@ -300,6 +333,31 @@ const Translate = () => {
                     </Button>
                   </div>
                 </div>
+                {output && translationId && (
+                  <div className="flex items-center justify-between border-t pt-3">
+                    <span className="text-sm text-muted-foreground">
+                      {feedbackRating ? "Thanks for rating this translation" : "Was this translation accurate?"}
+                    </span>
+                    <div className="flex gap-2">
+                      <Button
+                        variant={feedbackRating === 5 ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => submitFeedback(5)}
+                        disabled={submittingFeedback || feedbackRating !== null}
+                      >
+                        <ThumbsUp className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant={feedbackRating === 1 ? "destructive" : "outline"}
+                        size="sm"
+                        onClick={() => submitFeedback(1)}
+                        disabled={submittingFeedback || feedbackRating !== null}
+                      >
+                        <ThumbsDown className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

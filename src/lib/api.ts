@@ -22,11 +22,52 @@ export interface TranslateRequest {
 }
 
 export interface TranslateResponse {
+  id: number;
   translation: string;
   source_lang?: string | null;
   target_lang: string;
   domain?: string | null;
   confidence: number;
+}
+
+export interface TranslationRecord {
+  id: number;
+  source_lang?: string | null;
+  target_lang: string;
+  domain?: string | null;
+  input_text: string;
+  output_text: string;
+  confidence: number;
+  created_at: string;
+}
+
+export interface FeedbackRecord {
+  id: number;
+  translation_id: number;
+  rating: number;
+  comment?: string | null;
+  created_at: string;
+}
+
+export interface DatasetRecord {
+  id: number;
+  name: string;
+  description?: string | null;
+  source_lang?: string | null;
+  target_lang?: string | null;
+  domain?: string | null;
+  size_bytes: number;
+  uploaded_by_id: number;
+  created_at: string;
+}
+
+export interface DatasetUploadFields {
+  name: string;
+  description?: string;
+  source_lang?: string;
+  target_lang?: string;
+  domain?: string;
+  file: File;
 }
 
 class ApiError extends Error {
@@ -42,11 +83,12 @@ async function request<T>(
   options: RequestInit = {},
   token?: string | null
 ): Promise<T> {
-  const isForm = options.body instanceof URLSearchParams;
+  const skipJsonContentType =
+    options.body instanceof URLSearchParams || options.body instanceof FormData;
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
-      ...(isForm ? {} : { "Content-Type": "application/json" }),
+      ...(skipJsonContentType ? {} : { "Content-Type": "application/json" }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
@@ -82,6 +124,42 @@ export const api = {
       "/translate/",
       { method: "POST", body: JSON.stringify(payload) },
       token
+    ),
+
+  translationHistory: (token: string) =>
+    request<TranslationRecord[]>("/translate/history", {}, token),
+
+  submitFeedback: (
+    translationId: number,
+    payload: { rating: number; comment?: string },
+    token: string
+  ) =>
+    request<FeedbackRecord>(
+      `/translate/${translationId}/feedback`,
+      { method: "POST", body: JSON.stringify(payload) },
+      token
+    ),
+
+  listDatasets: () => request<DatasetRecord[]>("/datasets/"),
+
+  uploadDataset: (fields: DatasetUploadFields, token: string) => {
+    const form = new FormData();
+    form.set("name", fields.name);
+    if (fields.description) form.set("description", fields.description);
+    if (fields.source_lang) form.set("source_lang", fields.source_lang);
+    if (fields.target_lang) form.set("target_lang", fields.target_lang);
+    if (fields.domain) form.set("domain", fields.domain);
+    form.set("file", fields.file);
+    return request<DatasetRecord>(
+      "/datasets/",
+      { method: "POST", body: form },
+      token
+    );
+  },
+
+  getDatasetDownloadUrl: (datasetId: number) =>
+    request<{ url: string; expires_in_seconds: number }>(
+      `/datasets/${datasetId}/download`
     ),
 };
 

@@ -6,6 +6,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from .core.config import settings
 from .core.limiter import limiter
 from .api.v1.routes import auth as auth_routes
+from .api.v1.routes import datasets as datasets_routes
 from .api.v1.routes import translate as translate_routes
 
 tags_metadata = [
@@ -15,15 +16,19 @@ tags_metadata = [
     },
     {
         "name": "translation",
-        "description": "Text translation endpoints. Currently a placeholder implementation.",
+        "description": "Text translation via ml-service, with history and feedback.",
+    },
+    {
+        "name": "datasets",
+        "description": "Upload and browse parallel-corpus datasets, stored in MinIO/S3.",
     },
 ]
 
 app = FastAPI(
     title=settings.app_name,
-    version="0.1.0",
+    version="0.2.0",
     openapi_tags=tags_metadata,
-    description="API for the NMT Agent for Low-Resource Languages. Milestone 1 scaffolding.",
+    description="API for the NMT Agent for Low-Resource Languages.",
 )
 
 app.add_middleware(
@@ -45,4 +50,5 @@ app.add_middleware(SlowAPIMiddleware)
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(auth_routes.router)
 api_router.include_router(translate_routes.router)
+api_router.include_router(datasets_routes.router)
 app.include_router(api_router)
