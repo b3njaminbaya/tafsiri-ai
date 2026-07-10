@@ -1,7 +1,7 @@
 from app.main import app
 from app.ml_client import MLServiceError, get_ml_client
 
-from .conftest import FakeMLClient
+from .conftest import _fake_ml
 from .helpers import auth_headers, register_and_login
 
 
@@ -21,5 +21,5 @@ def test_translate_returns_503_when_ml_service_unreachable(client):
         )
         assert resp.status_code == 503
     finally:
-        # Restore the fake so later tests in the session aren't affected.
-        app.dependency_overrides[get_ml_client] = lambda: FakeMLClient()
+        # Restore the shared fake so later tests in the session aren't affected.
+        app.dependency_overrides[get_ml_client] = lambda: _fake_ml

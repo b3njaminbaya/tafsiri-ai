@@ -11,8 +11,8 @@ const NavBar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const canReview = user?.role?.name === "translator" || user?.role?.name === "admin";
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate("/login");
     setIsOpen(false);
   };

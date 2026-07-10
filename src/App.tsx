@@ -11,6 +11,9 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import VerifyEmail from "./pages/VerifyEmail";
 import Translate from "./pages/Translate";
 import Review from "./pages/Review";
 import Analytics from "./pages/Analytics";
@@ -26,6 +29,7 @@ import Security from "./pages/Security";
 import Contact from "./pages/Contact";
 import Accessibility from "./pages/Accessibility";
 import Community from "./pages/Community";
+import ForumPost from "./pages/ForumPost";
 import SystemStatus from "./pages/SystemStatus";
 import Blog from "./pages/Blog";
 import Support from "./pages/Support";
@@ -47,6 +51,9 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/verify-email" element={<VerifyEmail />} />
                 <Route
                   path="/translate"
                   element={
@@ -83,11 +90,26 @@ const App = () => (
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/accessibility" element={<Accessibility />} />
                 <Route path="/community" element={<Community />} />
+                <Route path="/community/posts/:postId" element={<ForumPost />} />
                 <Route path="/status" element={<SystemStatus />} />
                 <Route path="/blog" element={<Blog />} />
                 <Route path="/support" element={<Support />} />
-                <Route path="/gdpr-request" element={<GdprRequest />} />
-                <Route path="/privacy-settings" element={<PrivacySettings />} />
+                <Route
+                  path="/gdpr-request"
+                  element={
+                    <ProtectedRoute>
+                      <GdprRequest />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/privacy-settings"
+                  element={
+                    <ProtectedRoute>
+                      <PrivacySettings />
+                    </ProtectedRoute>
+                  }
+                />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

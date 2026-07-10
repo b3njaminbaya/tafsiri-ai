@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Real secrets — infra/.env.example is the committed template;
+# infra/.env (and any other .env) holds actual values and must never be committed.
+.env
+infra/.env
+
 # Python (backend/, ml-service/)
 __pycache__/
 *.pyc

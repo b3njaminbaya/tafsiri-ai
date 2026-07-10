@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm -f /tmp/nmt_verify5_cookies.txt)",
+      "Bash(curl -s -c /tmp/nmt_verify5_cookies.txt -X POST http://localhost:58001/api/v1/auth/register -H 'Content-Type: application/json' -d '{\"email\":\"batch5@example.com\",\"password\":\"secret123\"}' -o /dev/null -w 'register HTTP %{http_code}\\\\n')",
+      "Bash(curl -s -c /tmp/nmt_verify5_cookies.txt -b /tmp/nmt_verify5_cookies.txt -X POST http://localhost:58001/api/v1/auth/login -d 'username=batch5@example.com&password=secret123' -o /dev/null -w 'login HTTP %{http_code}\\\\n')",
+      "Bash(time curl -s -w '\\\\nHTTP %{http_code}\\\\n' -b /tmp/nmt_verify5_cookies.txt -X POST http://localhost:58001/api/v1/translate/ -H 'Content-Type: application/json' -d '{\"text\":\"hello\",\"target_lang\":\"es\"}')",
+      "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' http://localhost:58001/api/v1/billing/plans)",
+      "Bash(curl -s http://localhost:58001/api/v1/billing/plans)",
+      "Bash(time curl -s -w '\\\\nHTTP %{http_code}\\\\n' -b /tmp/nmt_verify5_cookies.txt -X POST http://localhost:58001/api/v1/billing/checkout-session -H 'Content-Type: application/json' -d '{\"price_id\":\"price_basic\"}')",
+      "Bash(pkill -f \"uvicorn app.main:app --port 58001\")",
+      "Bash(rm -f /tmp/nmt_verify5_cookies.txt /tmp/nmt_verify5.log)",
+      "Bash(ls .venv)",
+      "Bash(find . -maxdepth 1 -iname \"venv*\")",
+      "Bash(git check-ignore *)",
+      "Bash(python3 -c \"import secrets; print\\(secrets.token_urlsafe\\(48\\)\\)\")",
+      "Bash(git add *)",
+      "Bash(grep -i \"\\\\.env$\\\\|\\\\.claude\")",
+      "Bash(git commit -m ' *)",
+      "Bash(git reset *)"
+    ]
+  }
+}

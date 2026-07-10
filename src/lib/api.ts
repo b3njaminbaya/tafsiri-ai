@@ -4,7 +4,9 @@ export const API_BASE =
 export interface AuthUser {
   id: number;
   email: string;
+  display_name?: string | null;
   is_active: boolean;
+  is_verified: boolean;
   created_at: string;
   role: { id: number; name: string } | null;
 }
@@ -94,6 +96,48 @@ export interface CommunityStats {
   top_reviewers: ContributorCount[];
 }
 
+export const FORUM_CATEGORIES = [
+  "general",
+  "technical",
+  "feature_requests",
+  "model_training",
+  "dataset_sharing",
+] as const;
+
+export type ForumCategory = (typeof FORUM_CATEGORIES)[number];
+
+export interface ForumCategoryCount {
+  category: ForumCategory;
+  post_count: number;
+}
+
+export interface ForumPost {
+  id: number;
+  category: ForumCategory;
+  title: string;
+  author_handle: string;
+  reply_count: number;
+  created_at: string;
+}
+
+export interface ForumReply {
+  id: number;
+  post_id: number;
+  author_handle: string;
+  body: string;
+  created_at: string;
+}
+
+export interface ForumPostDetail {
+  id: number;
+  category: ForumCategory;
+  title: string;
+  body: string;
+  author_handle: string;
+  created_at: string;
+  replies: ForumReply[];
+}
+
 export interface DailyCount {
   date: string;
   count: number;
@@ -118,6 +162,54 @@ export interface AnalyticsSummary {
   feedback_breakdown: RatingBreakdown[];
 }
 
+export interface GlobalAnalyticsSummary extends AnalyticsSummary {
+  total_users: number;
+  total_datasets: number;
+}
+
+export interface PrivacySettings {
+  analytics: boolean;
+  marketing: boolean;
+  functional: boolean;
+  email_marketing: boolean;
+  sms_marketing: boolean;
+  push_notifications: boolean;
+  data_collection: boolean;
+  location_tracking: boolean;
+  third_party_sharing: boolean;
+}
+
+export type GdprRequestType =
+  | "access"
+  | "rectification"
+  | "erasure"
+  | "restrict"
+  | "portability"
+  | "object";
+
+export interface GdprRequestRecord {
+  id: number;
+  request_type: GdprRequestType;
+  description?: string | null;
+  status: "pending" | "completed";
+  created_at: string;
+  resolved_at?: string | null;
+}
+
+export interface Plan {
+  price_id: string;
+  quota_limit: number;
+}
+
+export interface DataExport {
+  user: AuthUser;
+  translations: TranslationRecord[];
+  feedback_given: FeedbackRecord[];
+  corrections_given: CorrectionRecord[];
+  datasets_uploaded: DatasetRecord[];
+  api_keys: unknown[];
+}
+
 class ApiError extends Error {
   status: number;
   constructor(status: number, message: string) {
@@ -135,6 +227,13 @@ async function request<T>(
     options.body instanceof URLSearchParams || options.body instanceof FormData;
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
+    // Sends/receives the httpOnly auth cookie on every request, including
+    // cross-origin ones (frontend and backend run on different ports in
+    // dev) — this is what lets the SPA authenticate without ever holding a
+    // JS-readable token. An explicit `token` is still supported for API/CLI
+    // parity and overrides the cookie when both are present (matches the
+    // backend's precedence).
+    credentials: "include",
     headers: {
       ...(skipJsonContentType ? {} : { "Content-Type": "application/json" }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -165,22 +264,83 @@ export const api = {
     return request<TokenResponse>("/auth/login", { method: "POST", body: form });
   },
 
-  me: (token: string) => request<AuthUser>("/auth/me", {}, token),
+  logout: () => request<{ message: string }>("/auth/logout", { method: "POST" }),
 
-  translate: (payload: TranslateRequest, token: string) =>
+  me: (token?: string | null) => request<AuthUser>("/auth/me", {}, token),
+
+  updateProfile: (payload: { display_name?: string | null }, token?: string | null) =>
+    request<AuthUser>(
+      "/auth/me",
+      { method: "PATCH", body: JSON.stringify(payload) },
+      token
+    ),
+
+  forgotPassword: (email: string) =>
+    request<{ message: string }>("/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+
+  resetPassword: (tokenValue: string, newPassword: string) =>
+    request<{ message: string }>("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ token: tokenValue, new_password: newPassword }),
+    }),
+
+  verifyEmail: (tokenValue: string) =>
+    request<{ message: string }>("/auth/verify-email", {
+      method: "POST",
+      body: JSON.stringify({ token: tokenValue }),
+    }),
+
+  resendVerification: (token?: string | null) =>
+    request<{ message: string }>("/auth/resend-verification", { method: "POST" }, token),
+
+  getOAuthProviders: () =>
+    request<{ google: boolean; github: boolean }>("/auth/oauth/providers"),
+
+  getPrivacySettings: (token?: string | null) =>
+    request<PrivacySettings>("/privacy/settings", {}, token),
+
+  updatePrivacySettings: (updates: Partial<PrivacySettings>, token?: string | null) =>
+    request<PrivacySettings>(
+      "/privacy/settings",
+      { method: "PUT", body: JSON.stringify(updates) },
+      token
+    ),
+
+  exportMyData: (token?: string | null) => request<DataExport>("/privacy/export", {}, token),
+
+  deleteAccount: (token?: string | null) =>
+    request<{ message: string }>("/privacy/delete-account", { method: "POST" }, token),
+
+  submitGdprRequest: (
+    payload: { request_type: GdprRequestType; description?: string },
+    token?: string | null
+  ) =>
+    request<GdprRequestRecord>(
+      "/privacy/gdpr-requests",
+      { method: "POST", body: JSON.stringify(payload) },
+      token
+    ),
+
+  listGdprRequests: (token?: string | null) =>
+    request<GdprRequestRecord[]>("/privacy/gdpr-requests", {}, token),
+
+  translate: (payload: TranslateRequest, token?: string | null) =>
     request<TranslateResponse>(
       "/translate/",
       { method: "POST", body: JSON.stringify(payload) },
       token
     ),
 
-  translationHistory: (token: string) =>
+  translationHistory: (token?: string | null) =>
     request<TranslationRecord[]>("/translate/history", {}, token),
 
   submitFeedback: (
     translationId: number,
     payload: { rating: number; comment?: string },
-    token: string
+    token?: string | null
   ) =>
     request<FeedbackRecord>(
       `/translate/${translationId}/feedback`,
@@ -190,7 +350,7 @@ export const api = {
 
   listDatasets: () => request<DatasetRecord[]>("/datasets/"),
 
-  uploadDataset: (fields: DatasetUploadFields, token: string) => {
+  uploadDataset: (fields: DatasetUploadFields, token?: string | null) => {
     const form = new FormData();
     form.set("name", fields.name);
     if (fields.description) form.set("description", fields.description);
@@ -210,7 +370,7 @@ export const api = {
       `/datasets/${datasetId}/download`
     ),
 
-  getReviewQueue: (token: string, minConfidence = 0.6) =>
+  getReviewQueue: (token?: string | null, minConfidence = 0.6) =>
     request<TranslationRecord[]>(
       `/review/queue?min_confidence=${minConfidence}`,
       {},
@@ -220,7 +380,7 @@ export const api = {
   submitCorrection: (
     translationId: number,
     payload: { corrected_text: string; note?: string },
-    token: string
+    token?: string | null
   ) =>
     request<CorrectionRecord>(
       `/review/${translationId}/correct`,
@@ -230,8 +390,35 @@ export const api = {
 
   getCommunityStats: () => request<CommunityStats>("/community/stats"),
 
-  getAnalyticsSummary: (token: string) =>
+  getAnalyticsSummary: (token?: string | null) =>
     request<AnalyticsSummary>("/analytics/summary", {}, token),
+
+  getGlobalAnalyticsSummary: (token?: string | null) =>
+    request<GlobalAnalyticsSummary>("/analytics/global", {}, token),
+
+  getPlans: () => request<Plan[]>("/billing/plans"),
+
+  createCheckoutSession: (price_id: string) =>
+    request<{ checkout_url: string }>("/billing/checkout-session", {
+      method: "POST",
+      body: JSON.stringify({ price_id }),
+    }),
+
+  getForumCategories: () => request<ForumCategoryCount[]>("/forum/categories"),
+
+  listForumPosts: (category?: ForumCategory) =>
+    request<ForumPost[]>(`/forum/posts${category ? `?category=${category}` : ""}`),
+
+  getForumPost: (postId: number) => request<ForumPostDetail>(`/forum/posts/${postId}`),
+
+  createForumPost: (payload: { category: ForumCategory; title: string; body: string }) =>
+    request<ForumPost>("/forum/posts", { method: "POST", body: JSON.stringify(payload) }),
+
+  createForumReply: (postId: number, payload: { body: string }) =>
+    request<ForumReply>(`/forum/posts/${postId}/replies`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
 };
 
 export { ApiError };

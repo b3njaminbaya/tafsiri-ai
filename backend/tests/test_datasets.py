@@ -50,6 +50,26 @@ def test_upload_rejects_empty_file(client):
     assert resp.status_code == 400
 
 
+def test_upload_rejects_disallowed_extension(client):
+    token = register_and_login(client, "bad_extension_uploader@example.com")
+    resp = _upload(client, token, filename="corpus.exe", content=b"not a dataset")
+    assert resp.status_code == 400
+    assert "extension" in resp.json()["detail"].lower()
+
+
+def test_upload_rejects_filename_with_no_extension(client):
+    token = register_and_login(client, "no_extension_uploader@example.com")
+    resp = _upload(client, token, filename="corpus", content=b"hello\thola\n")
+    assert resp.status_code == 400
+
+
+def test_upload_accepts_allowed_extensions(client):
+    token = register_and_login(client, "allowed_extension_uploader@example.com")
+    for filename in ("corpus.csv", "corpus.json", "corpus.jsonl", "corpus.tmx", "corpus.xliff"):
+        resp = _upload(client, token, filename=filename, content=b"a\tb\n")
+        assert resp.status_code == 200, f"{filename} should be accepted"
+
+
 def test_upload_rejects_oversized_file(client, monkeypatch):
     import app.core.config as config_module
 

@@ -8,49 +8,61 @@ const ApiDocs = () => {
   const endpoints = [
     {
       method: "POST",
-      path: "/api/v1/translate",
-      description: "Translate text between languages",
+      path: "/api/v1/translate/",
+      description: "Translate a single piece of text",
+      badge: "Core"
+    },
+    {
+      method: "POST",
+      path: "/api/v1/translate/batch",
+      description: "Translate up to 50 texts in one call — real batched inference where possible",
+      badge: "Batch"
+    },
+    {
+      method: "GET",
+      path: "/api/v1/translate/history",
+      description: "List your own past translations",
+      badge: "Core"
+    },
+    {
+      method: "POST",
+      path: "/api/v1/translate/{id}/feedback",
+      description: "Rate one of your own past translations",
       badge: "Core"
     },
     {
       method: "GET",
       path: "/api/v1/languages",
-      description: "Get supported language pairs",
+      description: "Get supported languages",
       badge: "Info"
-    },
-    {
-      method: "POST",
-      path: "/api/v1/batch",
-      description: "Batch translation for multiple texts",
-      badge: "Batch"
     },
     {
       method: "GET",
       path: "/api/v1/models",
-      description: "List available translation models",
+      description: "The translation model currently serving requests",
       badge: "Models"
     }
   ];
 
   const codeExamples = {
-    curl: `curl -X POST https://api.nmtplatform.com/v1/translate \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
+    curl: `curl -X POST http://localhost:8000/api/v1/translate/ \\
+  -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
     "text": "Hello, world!",
-    "source": "en",
-    "target": "es"
+    "source_lang": "en",
+    "target_lang": "es"
   }'`,
-    javascript: `const response = await fetch('https://api.nmtplatform.com/v1/translate', {
+    javascript: `const response = await fetch('http://localhost:8000/api/v1/translate/', {
   method: 'POST',
   headers: {
-    'Authorization': 'Bearer YOUR_API_KEY',
+    'X-API-Key': 'YOUR_API_KEY',
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({
     text: 'Hello, world!',
-    source: 'en',
-    target: 'es'
+    source_lang: 'en',
+    target_lang: 'es'
   })
 });
 
@@ -59,15 +71,15 @@ console.log(data.translation);`,
     python: `import requests
 
 response = requests.post(
-    'https://api.nmtplatform.com/v1/translate',
+    'http://localhost:8000/api/v1/translate/',
     headers={
-        'Authorization': 'Bearer YOUR_API_KEY',
+        'X-API-Key': 'YOUR_API_KEY',
         'Content-Type': 'application/json'
     },
     json={
         'text': 'Hello, world!',
-        'source': 'en',
-        'target': 'es'
+        'source_lang': 'en',
+        'target_lang': 'es'
     }
 )
 

@@ -13,7 +13,7 @@ import { useAuth } from "@/context/AuthContext";
 import { api, ApiError } from "@/lib/api";
 
 const Translate = () => {
-  const { token } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [text, setText] = useState("");
   const [sourceLanguage, setSourceLanguage] = useState("auto");
   const [targetLanguage, setTargetLanguage] = useState("en");
@@ -82,14 +82,19 @@ const Translate = () => {
   };
 
   const runTranslate = async () => {
-    if (!token) {
+    if (!isAuthenticated) {
       toast({ title: "Please log in" });
       return;
     }
     try {
       setLoading(true);
       setFeedbackRating(null);
-      const data = await api.translate({ text, target_lang: targetLanguage, domain }, token);
+      const data = await api.translate({
+        text,
+        source_lang: sourceLanguage === "auto" ? undefined : sourceLanguage,
+        target_lang: targetLanguage,
+        domain,
+      });
       setOutput(data.translation);
       setConfidence(data.confidence);
       setDetectedLanguage(data.source_lang ?? null);
@@ -103,10 +108,10 @@ const Translate = () => {
   };
 
   const submitFeedback = async (rating: number) => {
-    if (!token || !translationId || submittingFeedback) return;
+    if (!translationId || submittingFeedback) return;
     try {
       setSubmittingFeedback(true);
-      await api.submitFeedback(translationId, { rating }, token);
+      await api.submitFeedback(translationId, { rating });
       setFeedbackRating(rating);
       toast({ title: "Thanks for the feedback!" });
     } catch (err) {

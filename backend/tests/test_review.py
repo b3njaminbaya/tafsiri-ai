@@ -1,12 +1,11 @@
 from app.models import Translation
 
-from .conftest import TestingSessionLocal
+from .conftest import run_db
 from .helpers import auth_headers, register_and_login
 
 
 def _create_translation(user_id: int, confidence: float, text="hello", output="hola") -> int:
-    db = TestingSessionLocal()
-    try:
+    async def _impl(db):
         t = Translation(
             user_id=user_id,
             source_lang="en",
@@ -17,11 +16,10 @@ def _create_translation(user_id: int, confidence: float, text="hello", output="h
             confidence=confidence,
         )
         db.add(t)
-        db.commit()
-        db.refresh(t)
+        await db.commit()
         return t.id
-    finally:
-        db.close()
+
+    return run_db(_impl)
 
 
 def _promote_to_translator(client, promote_actor_to_admin, email: str) -> tuple[str, int]:

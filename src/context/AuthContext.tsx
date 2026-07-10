@@ -6,78 +6,71 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import { api, type AuthUser } from "@/lib/api";
-
-const TOKEN_KEY = "token";
+import { api, ApiError, type AuthUser } from "@/lib/api";
 
 interface AuthContextValue {
-  token: string | null;
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(() =>
-    localStorage.getItem(TOKEN_KEY)
-  );
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const clearSession = useCallback(() => {
-    localStorage.removeItem(TOKEN_KEY);
-    setToken(null);
-    setUser(null);
+  const refreshUser = useCallback(async () => {
+    try {
+      const me = await api.me();
+      setUser(me);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        setUser(null);
+      } else {
+        throw err;
+      }
+    }
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    if (!token) {
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
-    api
-      .me(token)
-      .then((me) => {
-        if (!cancelled) setUser(me);
-      })
-      .catch(() => {
-        if (!cancelled) clearSession();
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [token, clearSession]);
+    // The httpOnly auth cookie (if any) is sent automatically by the
+    // browser; asking /auth/me is how the SPA discovers whether it's
+    // already logged in, since JS has no way to read the cookie itself.
+    refreshUser().finally(() => setIsLoading(false));
+  }, [refreshUser]);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const data = await api.login(email, password);
-    localStorage.setItem(TOKEN_KEY, data.access_token);
-    setToken(data.access_token);
-  }, []);
+  const login = useCallback(
+    async (email: string, password: string) => {
+      await api.login(email, password);
+      await refreshUser();
+    },
+    [refreshUser]
+  );
 
   const register = useCallback(async (email: string, password: string) => {
     await api.register(email, password);
   }, []);
 
+  const logout = useCallback(async () => {
+    await api.logout().catch(() => undefined);
+    setUser(null);
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
-        token,
         user,
-        isAuthenticated: !!token,
+        isAuthenticated: !!user,
         isLoading,
         login,
         register,
-        logout: clearSession,
+        logout,
+        refreshUser,
       }}
     >
       {children}

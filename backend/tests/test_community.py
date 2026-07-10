@@ -39,3 +39,16 @@ def test_community_stats_handle_hides_email_domain(client):
     handles = [c["handle"] for c in body["top_dataset_contributors"]]
     assert "private_person" in handles
     assert not any("@" in h or "some-provider" in h for h in handles)
+
+
+def test_community_stats_prefers_display_name_over_email(client):
+    token = register_and_login(client, "handle_pref@example.com")
+    client.patch(
+        "/api/v1/auth/me", json={"display_name": "Handle Pref"}, headers=auth_headers(token)
+    )
+    _upload_dataset(client, token, name="Named Corpus")
+
+    resp = client.get("/api/v1/community/stats")
+    handles = [c["handle"] for c in resp.json()["top_dataset_contributors"]]
+    assert "Handle Pref" in handles
+    assert "handle_pref" not in handles

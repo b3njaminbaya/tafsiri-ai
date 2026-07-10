@@ -16,8 +16,44 @@ class Settings(BaseSettings):
         "postgresql+psycopg2://postgres:postgres@localhost:5432/nmt",
     )
 
+    # Cookie the browser SPA authenticates with (replaces storing the JWT in
+    # localStorage, which was readable — and stealable — by any XSS). API/CLI
+    # consumers keep using a plain Bearer header; nothing changes for them.
+    access_token_cookie_secure: bool = os.getenv("ENVIRONMENT", "development") != "development"
+
+    # If set, this email is promoted to admin automatically at registration
+    # time (case-insensitive) — the only way to get a first admin account
+    # otherwise is a direct database edit. Safe to leave unset: nothing
+    # happens differently for any other email.
+    first_admin_email: str = os.getenv("FIRST_ADMIN_EMAIL", "")
+
+    frontend_base_url: str = os.getenv("FRONTEND_BASE_URL", "http://localhost:8080")
+    backend_base_url: str = os.getenv("BACKEND_BASE_URL", "http://localhost:8000")
+
+    # OAuth (Google/GitHub). Both unset by default: the corresponding login
+    # button is reported as unavailable (see GET /auth/oauth/providers) and
+    # the login/callback endpoints return a clear 503 rather than attempting
+    # a call with empty credentials.
+    google_client_id: str = os.getenv("GOOGLE_CLIENT_ID", "")
+    google_client_secret: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
+    github_client_id: str = os.getenv("GITHUB_CLIENT_ID", "")
+    github_client_secret: str = os.getenv("GITHUB_CLIENT_SECRET", "")
+
+    # Email (password reset, verification, GDPR export links). If SMTP isn't
+    # configured, the app doesn't fail — it logs the message it would have
+    # sent instead, which is enough to develop and test these flows without
+    # a real mail server. See app/email_client.py.
+    smtp_host: str = os.getenv("SMTP_HOST", "")
+    smtp_port: int = int(os.getenv("SMTP_PORT", "587"))
+    smtp_username: str = os.getenv("SMTP_USERNAME", "")
+    smtp_password: str = os.getenv("SMTP_PASSWORD", "")
+    smtp_from_address: str = os.getenv("SMTP_FROM_ADDRESS", "noreply@nmtagent.local")
+
     ml_service_url: str = os.getenv("ML_SERVICE_URL", "http://localhost:8001")
     ml_service_timeout_seconds: float = float(os.getenv("ML_SERVICE_TIMEOUT_SECONDS", "30"))
+
+    redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    cache_ttl_seconds: int = int(os.getenv("CACHE_TTL_SECONDS", "3600"))
 
     # Internal endpoint (container-network hostname, e.g. http://minio:9000) used
     # by the backend itself to put/get objects. Kept separate from
@@ -45,6 +81,31 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> List[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    # Billing (Stripe). Unverified against the real Stripe API in this repo's
+    # own development/CI environment — no test-mode credentials are available
+    # here. Tested against a fake client (see tests/test_billing.py); wiring
+    # real STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET values is required before
+    # this does anything in a real deployment.
+    stripe_secret_key: str = os.getenv("STRIPE_SECRET_KEY", "")
+    stripe_webhook_secret: str = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+    stripe_checkout_success_url: str = os.getenv(
+        "STRIPE_CHECKOUT_SUCCESS_URL", "http://localhost:8080/billing/success"
+    )
+    stripe_checkout_cancel_url: str = os.getenv("STRIPE_CHECKOUT_CANCEL_URL", "http://localhost:8080/pricing")
+    # Stripe price IDs are opaque strings assigned per-project in the Stripe
+    # dashboard, so this maps them to this app's own quota tiers via env var
+    # rather than hardcoding placeholder IDs: "price_basic:1000,price_pro:100000".
+    stripe_price_quota_map: str = os.getenv("STRIPE_PRICE_QUOTA_MAP", "")
+
+    @property
+    def stripe_price_to_quota(self) -> dict:
+        mapping = {}
+        for pair in self.stripe_price_quota_map.split(","):
+            if ":" in pair:
+                price_id, quota = pair.split(":", 1)
+                mapping[price_id.strip()] = int(quota.strip())
+        return mapping
 
 
 settings = Settings()

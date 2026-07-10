@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .... import schemas
 from ....deps import get_db, require_any_role
@@ -15,22 +16,22 @@ REVIEWER_ROLES = ("translator", "admin")
     response_model=list[schemas.TranslationRead],
     summary="Active-learning review queue: low-confidence translations awaiting a correction",
 )
-def review_queue(
+async def review_queue(
     min_confidence: float = 0.6,
     limit: int = 50,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     _reviewer=Depends(require_any_role(*REVIEWER_ROLES)),
 ):
     limit = max(1, min(limit, 200))
-    already_corrected = db.query(Correction.translation_id).distinct()
-    return (
-        db.query(Translation)
-        .filter(Translation.confidence < min_confidence)
-        .filter(~Translation.id.in_(already_corrected))
+    already_corrected = select(Correction.translation_id).distinct()
+    result = await db.execute(
+        select(Translation)
+        .where(Translation.confidence < min_confidence)
+        .where(~Translation.id.in_(already_corrected))
         .order_by(Translation.confidence.asc())
         .limit(limit)
-        .all()
     )
+    return result.scalars().all()
 
 
 @router.post(
@@ -38,13 +39,14 @@ def review_queue(
     response_model=schemas.CorrectionRead,
     summary="Submit a corrected translation (translator/admin only)",
 )
-def submit_correction(
+async def submit_correction(
     translation_id: int,
     correction_in: schemas.CorrectionCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     reviewer=Depends(require_any_role(*REVIEWER_ROLES)),
 ):
-    translation = db.query(Translation).filter(Translation.id == translation_id).first()
+    result = await db.execute(select(Translation).where(Translation.id == translation_id))
+    translation = result.scalar_one_or_none()
     if not translation:
         raise HTTPException(status_code=404, detail="Translation not found")
 
@@ -55,6 +57,5 @@ def submit_correction(
         note=correction_in.note,
     )
     db.add(correction)
-    db.commit()
-    db.refresh(correction)
+    await db.commit()
     return correction

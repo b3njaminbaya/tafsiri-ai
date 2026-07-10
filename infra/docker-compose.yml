@@ -34,19 +34,60 @@ services:
       exit 0
       "
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
   backend:
     build:
       context: ../backend
       dockerfile: Dockerfile
+    # Real values come from infra/.env (gitignored — copy infra/.env.example
+    # to infra/.env and fill it in, then run `docker compose` from inside
+    # infra/ so Compose picks it up automatically for the ${VAR:-default}
+    # substitution below). Everything has a working default, so
+    # `docker compose up` still works with zero setup.
     environment:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/nmt
-      SECRET_KEY: dev-secret-change-me
-      CORS_ORIGINS: http://localhost:5173,http://localhost:8080
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-change-me}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:8080}
       ML_SERVICE_URL: http://ml-service:8001
+      REDIS_URL: redis://redis:6379/0
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:8080}
+      BACKEND_BASE_URL: ${BACKEND_BASE_URL:-http://localhost:8000}
+      # Promotes this email to admin automatically at registration — the
+      # only other way to get a first admin account is a direct DB edit.
+      # Leave blank in infra/.env to disable.
+      FIRST_ADMIN_EMAIL: ${FIRST_ADMIN_EMAIL:-}
+      # Password reset / verification email. Without SMTP_HOST, the backend
+      # logs the email it would have sent instead of failing — see
+      # backend/README.md.
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS:-noreply@nmtagent.local}
+      # Google/GitHub OAuth login — each is disabled (and its frontend button
+      # shown as unavailable) unless both its client id and secret are set.
+      # See backend/README.md.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      # Billing is unwired without real Stripe credentials — set these to a
+      # test-mode secret key/webhook secret/price-to-quota map to enable it.
+      # See backend/README.md.
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_PRICE_QUOTA_MAP: ${STRIPE_PRICE_QUOTA_MAP:-}
     ports:
       - "8000:8000"
     depends_on:
       - db
+      - redis
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 
   ml-service:
@@ -65,3 +106,4 @@ volumes:
   db-data:
   minio-data:
   ml-model-cache:
+  redis-data:

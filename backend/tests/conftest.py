@@ -1,11 +1,12 @@
+import asyncio
 import os
 import sys
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -14,6 +15,9 @@ os.environ.setdefault("SECRET_KEY", "test-secret")
 
 from app.database import Base
 from app.deps import get_db
+from app.billing_client import BillingError, get_stripe_client
+from app.cache import get_cache_client
+from app.oauth_client import get_github_oauth_client, get_google_oauth_client
 from app.ml_client import get_ml_client
 from app.models import Role, User
 from app.main import app
@@ -27,12 +31,35 @@ class FakeMLClient:
     network call to a running ml-service.
     """
 
-    def translate(self, text: str, target_lang: str, source_lang=None, domain=None) -> dict:
+    def __init__(self):
+        self.call_count = 0
+
+    async def translate(self, text: str, target_lang: str, source_lang=None, domain=None, forced_terms=None) -> dict:
+        self.call_count += 1
         return {
             "translation": f"[{target_lang}] {text[::-1]}",
             "source_lang": source_lang or "en",
             "confidence": 0.87,
+            "applied_glossary_terms": forced_terms or [],
         }
+
+    async def translate_batch(self, items: list) -> list:
+        return [
+            await self.translate(
+                item["text"],
+                item["target_lang"],
+                item.get("source_lang"),
+                item.get("domain"),
+                item.get("forced_terms"),
+            )
+            for item in items
+        ]
+
+    async def get_languages(self) -> dict:
+        return {"languages": [{"code": "en", "name": "English"}, {"code": "es", "name": "Spanish"}]}
+
+    async def get_health(self) -> dict:
+        return {"status": "ok", "model_name": "fake-model", "model_loaded": True}
 
 
 class FakeS3Client:
@@ -52,28 +79,149 @@ class FakeS3Client:
         return f"http://fake-s3.local/{bucket}/{key}?expires={ExpiresIn}"
 
 
-_fake_s3 = FakeS3Client()
+class FakeCacheClient:
+    """In-memory stand-in for the Redis-backed CacheClient — same rationale
+    as FakeMLClient/FakeS3Client: exercises the real cache-hit/miss logic in
+    the translate route without a running Redis instance.
+    """
 
-app.dependency_overrides[get_ml_client] = lambda: FakeMLClient()
+    def __init__(self):
+        self.store: dict = {}
+
+    @staticmethod
+    def translation_key(text, source_lang, target_lang, domain) -> str:
+        return f"{source_lang or 'auto'}|{target_lang}|{domain or ''}|{text}"
+
+    def get(self, key: str):
+        return self.store.get(key)
+
+    def set(self, key: str, value: dict) -> None:
+        self.store[key] = value
+
+
+class FakeStripeClient:
+    """In-process stand-in for the Stripe SDK — same rationale as the other
+    fakes. There are no Stripe test-mode credentials in this environment, so
+    this is what the billing routes are actually verified against; see
+    app/billing_client.py's docstring for what that does and doesn't prove.
+    """
+
+    def __init__(self):
+        self.created_sessions: list = []
+        self.configured = True
+        self.webhook_configured = True
+
+    @property
+    def is_configured(self) -> bool:
+        return self.configured
+
+    @property
+    def webhook_is_configured(self) -> bool:
+        return self.webhook_configured
+
+    def create_checkout_session(self, price_id, customer_email, success_url, cancel_url) -> str:
+        self.created_sessions.append({"price_id": price_id, "customer_email": customer_email})
+        return f"https://fake-stripe.local/checkout/{price_id}"
+
+    def construct_webhook_event(self, payload: bytes, sig_header: str) -> dict:
+        import json
+
+        if sig_header != "valid-test-signature":
+            raise BillingError("invalid signature")
+        return json.loads(payload)
+
+
+class _FakeOAuthConfig:
+    def __init__(self, name: str):
+        self.name = name
+
+
+class FakeOAuthClient:
+    """In-process stand-in for Google/GitHub's OAuth HTTP APIs — same
+    rationale as the other fakes. There's no way to exercise a real OAuth
+    consent screen from an automated test, so this is what the OAuth routes
+    are actually verified against; the login/callback flow logic (state
+    validation, account linking, cookie issuance) is real and real-tested,
+    only the provider HTTP calls are faked.
+    """
+
+    def __init__(self, name: str, configured: bool = True):
+        self.config = _FakeOAuthConfig(name)
+        self.configured = configured
+        self.next_email = f"{name}user@example.com"
+        self.next_subject = "fake-subject-1"
+        self.fail_exchange = False
+
+    @property
+    def is_configured(self) -> bool:
+        return self.configured
+
+    def get_authorize_url(self, state: str) -> str:
+        return f"https://fake-{self.config.name}.local/authorize?state={state}"
+
+    def exchange_code(self, code: str) -> str:
+        if self.fail_exchange or code == "bad-code":
+            from app.oauth_client import OAuthError
+
+            raise OAuthError("code exchange failed")
+        return "fake-access-token"
+
+    def get_user_email_and_subject(self, access_token: str):
+        return self.next_email, self.next_subject
+
+
+_fake_ml = FakeMLClient()
+_fake_s3 = FakeS3Client()
+_fake_cache = FakeCacheClient()
+_fake_stripe = FakeStripeClient()
+_fake_google_oauth = FakeOAuthClient("google")
+_fake_github_oauth = FakeOAuthClient("github")
+
+app.dependency_overrides[get_ml_client] = lambda: _fake_ml
 app.dependency_overrides[get_s3_client] = lambda: _fake_s3
 app.dependency_overrides[get_s3_public_client] = lambda: _fake_s3
+app.dependency_overrides[get_cache_client] = lambda: _fake_cache
+app.dependency_overrides[get_stripe_client] = lambda: _fake_stripe
+app.dependency_overrides[get_google_oauth_client] = lambda: _fake_google_oauth
+app.dependency_overrides[get_github_oauth_client] = lambda: _fake_github_oauth
 
-engine = create_engine(
-    "sqlite:///:memory:",
+engine = create_async_engine(
+    "sqlite+aiosqlite:///:memory:",
     connect_args={"check_same_thread": False},
     poolclass=StaticPool,
 )
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-Base.metadata.create_all(bind=engine)
+TestingSessionLocal = async_sessionmaker(bind=engine, autocommit=False, autoflush=False, expire_on_commit=False)
 
 
-def _override_get_db():
-    db = TestingSessionLocal()
-    try:
+def run_db(fn):
+    """Bridges a synchronous test function into the async test DB.
+
+    Test functions themselves stay plain `def` (TestClient runs the app's
+    async routes fine without pytest-asyncio); this is only for the handful
+    of test helpers that need to poke the DB directly, bypassing the API —
+    each gets its own short-lived event loop via asyncio.run(), which is safe
+    for aiosqlite (it doesn't hard-bind a connection to one loop the way an
+    asyncpg pool would).
+    """
+
+    async def _impl():
+        async with TestingSessionLocal() as db:
+            return await fn(db)
+
+    return asyncio.run(_impl())
+
+
+async def _create_all():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+
+asyncio.run(_create_all())
+
+
+async def _override_get_db():
+    async with TestingSessionLocal() as db:
         yield db
-    finally:
-        db.close()
 
 
 app.dependency_overrides[get_db] = _override_get_db
@@ -81,22 +229,34 @@ app.dependency_overrides[get_db] = _override_get_db
 
 @pytest.fixture(scope="session", autouse=True)
 def seed_roles():
-    db = TestingSessionLocal()
-    for name in ["admin", "translator", "user"]:
-        if not db.query(Role).filter(Role.name == name).first():
-            db.add(Role(name=name))
-    db.commit()
-    db.close()
+    async def _seed(db):
+        for name in ["admin", "translator", "user"]:
+            existing = (await db.execute(select(Role).where(Role.name == name))).scalar_one_or_none()
+            if not existing:
+                db.add(Role(name=name))
+        await db.commit()
+
+    run_db(_seed)
 
 
 @pytest.fixture(autouse=True)
-def _reset_rate_limits():
-    # The limiter is a module-level singleton shared across the whole test
-    # session (same as in a real running app) — without this, tests that
-    # register/login several times would start tripping the real 5/min and
-    # 10/min limits depending on test order, since TestClient requests all
-    # share the same fake remote address.
+def _reset_test_state():
+    # The limiter, fake ML client, and fake cache are all module-level
+    # singletons shared across the whole test session (same as their real
+    # counterparts in a running app) — without resetting them, tests would
+    # leak rate-limit counts, cached translations, and call counts into each
+    # other depending on test order.
     limiter.reset()
+    _fake_ml.call_count = 0
+    _fake_cache.store.clear()
+    _fake_stripe.created_sessions.clear()
+    _fake_stripe.configured = True
+    _fake_stripe.webhook_configured = True
+    for oauth_fake, name in ((_fake_google_oauth, "google"), (_fake_github_oauth, "github")):
+        oauth_fake.configured = True
+        oauth_fake.fail_exchange = False
+        oauth_fake.next_email = f"{name}user@example.com"
+        oauth_fake.next_subject = "fake-subject-1"
     yield
 
 
@@ -119,13 +279,14 @@ def promote_actor_to_admin(client):
         from .helpers import register_and_login
 
         token = register_and_login(client, email, password)
-        db = TestingSessionLocal()
-        try:
-            user = db.query(User).filter(User.email == email).first()
-            user.role = db.query(Role).filter(Role.name == "admin").first()
-            db.commit()
-        finally:
-            db.close()
+
+        async def _do_promote(db):
+            user = (await db.execute(select(User).where(User.email == email))).scalar_one()
+            admin_role = (await db.execute(select(Role).where(Role.name == "admin"))).scalar_one()
+            user.role = admin_role
+            await db.commit()
+
+        run_db(_do_promote)
         return token
 
     return _promote

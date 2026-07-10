@@ -1,6 +1,36 @@
 from .helpers import auth_headers, register_and_login
 
 
+def test_global_analytics_requires_admin(client, promote_actor_to_admin):
+    token = register_and_login(client, "not_an_admin@example.com")
+    resp = client.get("/api/v1/analytics/global", headers=auth_headers(token))
+    assert resp.status_code == 403
+
+    admin_token = promote_actor_to_admin("global_admin@example.com")
+    resp_admin = client.get("/api/v1/analytics/global", headers=auth_headers(admin_token))
+    assert resp_admin.status_code == 200
+    body = resp_admin.json()
+    assert "total_users" in body
+    assert "total_datasets" in body
+
+
+def test_global_analytics_aggregates_across_users(client, promote_actor_to_admin):
+    token_a = register_and_login(client, "global_a@example.com")
+    token_b = register_and_login(client, "global_b@example.com")
+    client.post(
+        "/api/v1/translate/", json={"text": "hi", "target_lang": "es"}, headers=auth_headers(token_a)
+    )
+    client.post(
+        "/api/v1/translate/", json={"text": "yo", "target_lang": "fr"}, headers=auth_headers(token_b)
+    )
+
+    admin_token = promote_actor_to_admin("global_admin2@example.com")
+    resp = client.get("/api/v1/analytics/global", headers=auth_headers(admin_token))
+    body = resp.json()
+    assert body["total_translations"] >= 2
+    assert body["total_users"] >= 3
+
+
 def test_analytics_requires_auth(client):
     resp = client.get("/api/v1/analytics/summary")
     assert resp.status_code == 401

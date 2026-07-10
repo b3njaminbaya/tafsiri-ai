@@ -208,3 +208,101 @@ Real per-domain fine-tuned adapters (LoRA or otherwise) need labeled training da
 - No dedicated username/display-name field — community attribution uses email local-parts as a stand-in.
 - The Community page's discussion forum remains entirely mock; a real one is a distinct feature, not attempted here.
 - Analytics are personal-only; there's no admin/global view across all users yet.
+
+---
+
+## Phase 3 progress log (2026-07-10)
+
+Phase 3 targeted the roadmap's scale items: async DB access, caching, ml-service batching, and billing. Kubernetes/Elasticsearch were explicitly left out — the roadmap itself scoped those as "if traffic justifies it," and nothing about this project's current traffic does.
+
+### Batch translation
+
+- `ml-service`'s `/translate` and the new `/translate/batch` now share one `_generate()` helper. Items needing glossary term-forcing are translated individually (`force_words_ids` applies uniformly across a whole `generate()` call, so items needing different forced terms can't share one batched call); everything else is grouped by `(source_lang, target_lang)` and translated in a single real batched `generate()` call per group — genuine batching, not a loop dressed up as one.
+- Backend adds `POST /translate/batch` (up to 50 items, persists each as its own `Translation` row) and real `GET /languages` / `GET /models` endpoints proxied from `ml-service` — closing two gaps `ApiDocs.tsx` had been advertising since the original audit. Rewrote that page's endpoint list and code samples to match what's actually real (correct paths, `X-API-Key` instead of a fictional `Bearer` scheme, no more `api.nmtplatform.com`).
+
+### Caching
+
+- New Redis-backed `CacheClient` (`app/cache.py`): identical `(text, source_lang, target_lang, domain)` requests skip the `ml-service` call entirely. Caching is explicitly an optimization, not a correctness requirement — every Redis call is wrapped so a Redis outage degrades to "no caching," never a failed request. Verified twice: once with a fake in dependency-injected tests (confirms `ml-service` is called exactly once across two identical requests), and once against a real Redis container (miss → set → hit → key-differentiation, all directly exercised).
+- Every translation still persists its own `Translation` row regardless of cache hit/miss — caching the model call is an implementation detail, not something that should hide a user's own history of what they translated and when.
+
+### Async DB access
+
+The highest-risk item this phase — it touches `database.py`, `deps.py`, and every route file, and has a real subtlety: SQLAlchemy's async mode can't lazy-load a relationship outside an `await` (raises `MissingGreenlet`), so `User.role` needed explicit `selectinload(...)` everywhere it's read downstream (RBAC checks, `UserRead` serialization). Converted one module at a time, running the full test suite after each step rather than batching the whole thing and hoping.
+
+The full test suite passed against SQLite on the first run (51/51) — which is exactly why the Postgres check mattered more than usual: SQLite passing doesn't prove the async Postgres driver behaves identically, and in fact it didn't. Verifying live against a real Postgres container surfaced a genuine bug the SQLite suite couldn't see:
+
+- **`datetime.now(timezone.utc)` into a naive `DateTime` column**: `psycopg2` (the sync driver) silently tolerated inserting a timezone-aware datetime into a `TIMESTAMP WITHOUT TIME ZONE` column; `asyncpg` correctly rejects it (`DataError: can't subtract offset-naive and offset-aware datetimes`). Fixed by making all six `created_at` columns `DateTime(timezone=True)` (migration `0005`) — fixing the column type, not stripping the timezone from the datetimes, since timezone-aware storage is the actually-correct practice.
+
+After that fix, the entire flow was re-verified live against real Postgres: register → login → `/me` (exercises the `role` eager-load) → API key creation → RBAC 403s → `/translate` (persisted) → `/translate/history` → `/translate/batch` → `/datasets` → `/community/stats` → `/analytics/summary`, all against `postgresql+asyncpg://`, then torn down cleanly.
+
+`DATABASE_URL` itself is unchanged (`postgresql+psycopg2://...`) — the app converts it to the async driver internally (`database.py`'s `to_async_url`), and Alembic keeps using the sync form directly, so no deployment config needed to change.
+
+### Billing (Stripe) — the one item not fully verified
+
+`app/billing_client.py` + `POST /billing/checkout-session` + `POST /billing/webhook` implement Checkout session creation and webhook-driven quota updates (mapping a purchased Stripe price ID to an API key's `quota_limit` — the same field Phase 0 built and left unenforced-by-a-purchase-flow until now). Tested against a fake Stripe client using the same dependency-injection pattern as `MLServiceClient`/S3/Redis.
+
+Unlike everything else in this project's audit trail, this one **could not be verified against the real external API** — there are no Stripe test-mode credentials in this development environment. Rather than either skip it silently or pretend it's proven, it's shipped tested-with-a-fake and clearly labeled: see `backend/README.md`'s billing section for exactly what would need to happen (real `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`, a real webhook pointed at `/billing/webhook`, one real test-mode checkout walked through end-to-end) before this is production-ready. The frontend Pricing page is deliberately left without a wired "Subscribe" button for the same reason — wiring it to an unverified backend would recreate the exact "UI that pretends to work" pattern the original audit exists to call out.
+
+### Testing
+
+58 backend tests (up from 40), all passing against both the SQLite test suite and — for the parts that matter most (auth, RBAC, persistence) — directly re-verified against real Postgres.
+
+### What's still open after Phase 3
+
+- Billing is code-complete and unit-tested but not verified against the real Stripe API (see above) — needs real credentials to close out.
+- `ml_client`'s HTTP calls to `ml-service` are still synchronous (`httpx.post`, not `httpx.AsyncClient`) even though the route handling them is now `async def` — the DB layer no longer blocks the event loop, but a slow `ml-service` response still would. Converting `MLServiceClient` to use `httpx.AsyncClient` is a natural, contained follow-up.
+- Kubernetes/Elasticsearch remain out of scope, per the roadmap's own framing — revisit if/when real traffic justifies them.
+
+---
+
+## Post-Phase-3 backlog clearance (2026-07-10 onward)
+
+Working through everything flagged as "remaining" across Phases 0–3, batched and tested one batch at a time. Explicit constraint for this pass: every optional integration (email, OAuth, billing) must leave the app fully functional whether or not real credentials are configured — degrade gracefully, never crash or block other features.
+
+### Batch 1 — Auth hardening
+
+- **JWT moved off `localStorage` to an httpOnly cookie.** `/auth/login` sets it, `/auth/logout` clears it; API/CLI consumers keep using a plain Bearer header, which wins over the cookie if a request somehow carries both (`deps.py`'s `get_token_from_request`). Frontend `AuthContext` no longer holds a token at all — it calls `/auth/me` on mount to discover whether the ambient cookie is valid, since JS can't read an httpOnly cookie itself.
+  - Real bug found via testing: `TestClient`'s cookie jar persists across requests within a test, so a stale cookie from an earlier login was silently overriding explicit `Authorization` headers in existing tests (and would do the same for any real API client sharing an origin) — fixed by making an explicit Bearer header always take precedence over the ambient cookie.
+- **Bootstrap admin** via `FIRST_ADMIN_EMAIL`: that email is promoted to admin at registration time; unset by default, in which case nothing changes for anyone.
+- **Password reset** and **email verification**, both via a shared `AuthToken` table (single-use, expiring) and a new `EmailClient` (`app/email_client.py`) that logs the email it would have sent when `SMTP_HOST` isn't configured, rather than failing.
+  - Real bug found via testing: SQLite (`aiosqlite`) doesn't round-trip `tzinfo` for a `DateTime(timezone=True)` column the way Postgres/`asyncpg` does — token-expiry comparisons crashed with `TypeError: can't compare offset-naive and offset-aware datetimes` on SQLite only. Fixed by normalizing to UTC-aware before comparing, tolerant of either.
+  - Also found: the backend never called `logging.basicConfig()`, so the email fallback's `logger.info()` calls were silently dropped — the entire point of "log instead of failing" wasn't actually visible. Fixed.
+- New frontend pages: `/forgot-password`, `/reset-password`, `/verify-email`.
+- Verified live end-to-end against real Postgres: register → login (real cookie) → `/me` via cookie alone → forgot-password (real logged reset link) → reset-password with that real token → login with the new password (and old one correctly rejected) → email verification → logout clearing the cookie.
+
+### Batch 2 — OAuth (Google + GitHub)
+
+- `app/oauth_client.py`: a plain Authorization Code flow over `httpx` (not a third-party OAuth library — both providers are well-documented plain HTTP APIs, and this matches the rest of the codebase's dependency footprint). CSRF-protected via a short-lived `state` value round-tripped through an httpOnly cookie scoped to the OAuth path.
+- `User.hashed_password` is now nullable (OAuth-only accounts have none); new `oauth_provider`/`oauth_subject` columns with a unique index (migration `0007`). Signing in via a provider links to an existing password-based account sharing that email rather than creating a duplicate.
+- `GET /auth/oauth/providers` reports which providers are actually configured; the frontend login page uses this to show disabled/labeled buttons for unavailable providers instead of offering a button that 503s — directly satisfying "works whether credentials are provided or not."
+- Tested against fakes (there's no way to drive a real OAuth consent screen from an automated test) covering: new-account creation, returning-user reuse, linking to an existing password account, state-mismatch rejection, provider-failure handling, and the case where an OAuth-only account correctly can't log in with a password.
+- Verified live against real Postgres **with no Google/GitHub credentials configured at all** — the specific scenario this batch was constrained to support: app boots normally, `/auth/oauth/providers` correctly reports both `false`, login attempts return a clean 503 instead of crashing, and normal email/password registration is completely unaffected.
+
+### Batch 3 — GDPR/privacy real backend
+
+- `GET/PUT /privacy/settings`: real persisted consent preferences (new `PrivacySettings` table, one row per user, created lazily on first access) — `PrivacyDashboard.tsx`'s toggles now actually save instead of resetting on refresh.
+- `GET /privacy/export`: a real, **immediate** JSON download of everything the user's own account touches — profile, translations, feedback given, corrections given, datasets uploaded, API keys — replacing the old fake "we'll email it within 24 hours" promise with something both more honest and better UX.
+- `POST /privacy/delete-account`: anonymizes rather than hard-deletes (email scrubbed to `deleted-user-{id}-{random}@deleted.local`, password cleared, account deactivated, API keys revoked) instead of cascading a real delete through translations/corrections/dataset uploads that other parts of the system (community stats, the review queue, other users' downloads) legitimately still reference. GDPR erasure doesn't require destroying data once it's anonymized.
+- `POST/GET /privacy/gdpr-requests`: a real `GdprRequest` log. `access`/`portability` auto-complete immediately (already fully served by the export endpoint above); `rectification`/`restrict`/`object` are recorded and stay `pending` — there's no admin review UI for those yet, an honestly-labeled gap rather than a silent one.
+- Frontend: `PrivacyDashboard.tsx` and `GdprRequestForm.tsx` rewritten to call these endpoints for real (both routes now behind `ProtectedRoute`, since they call authenticated endpoints and weren't gated before).
+- Verified live end-to-end against real Postgres: default settings → update persists → real data export → GDPR access request auto-completing → account deletion → old session correctly rejected → the anonymized email immediately free to re-register.
+
+### Batch 4 — Product completeness
+
+- **DB-backed glossary** (new `GlossaryTerm` table, migration `0009`, seeded with the 27 terms ml-service previously hardcoded — no regression on upgrade). New `GET/POST/DELETE /glossary` routes (writes admin-only); `app/glossary.py`'s `resolve_forced_terms()` looks up matches and passes them to ml-service's `forced_terms` override, which now takes precedence over ml-service's own (now-vestigial, still-present-as-fallback) internal dict. Deliberately returns `None` (not `[]`) for auto-detect requests, since matching needs the actual source language — ml-service falls back to its own small static glossary only in that one case, a documented limitation rather than a silent gap.
+- **Display name** (`User.display_name`, migration `0010`, nullable, editable via `PATCH /auth/me`): community leaderboards and the new forum now show it in place of the email-local-part fallback when set. Shared `app/handles.py::public_handle()` used by both. Frontend: new "Profile" tab on the Privacy Dashboard.
+- **Real community forum** — `ForumPost`/`ForumReply` tables (migration `0011`), five fixed categories. `GET /forum/categories` (counts), `GET/POST /forum/posts`, `GET /forum/posts/{id}` (with replies), `POST /forum/posts/{id}/replies` (writes require auth). `Community.tsx` rewritten off its mock data onto these; new `/community/posts/:postId` detail page and a "New Topic" dialog.
+- **Admin/global analytics** — `GET /analytics/global` (admin-only), sharing the same aggregation helper as the personal `/analytics/summary` endpoint, extended with `total_users`/`total_datasets`. `Analytics.tsx` shows a "My Analytics" / "Platform-wide" tab switcher for admins only.
+- **Dataset upload format validation** — extension allowlist (`.tsv`, `.csv`, `.txt`, `.json`, `.jsonl`, `.tmx`, `.xliff`, `.xlf`) enforced in `datasets.py` before the file ever reaches storage; frontend file input's `accept` attribute matches.
+- 23 new backend tests across glossary, display-name, forum, global analytics, and dataset validation — full suite (121 tests) green throughout.
+- Verified live against real Postgres with **zero optional credentials configured**: ran all 5 new migrations from a clean database (including the glossary seed data), bootstrap-admin registration, glossary CRUD, display-name update reflected in a forum post's `author_handle`, forum post+reply+detail+category-count round trip, global analytics, and the dataset extension allowlist correctly rejecting a `.exe` before touching S3.
+
+### Batch 5 — Infra polish
+
+- **Async `ml_client`**: `MLServiceClient` converted from synchronous `httpx.post`/`httpx.get` calls to `httpx.AsyncClient`; all four methods (`translate`, `translate_batch`, `get_languages`, `get_health`) are now `async def` and awaited from the route handlers. A slow or hanging ml-service call no longer blocks the event loop out from under every other concurrent request. `FakeMLClient` in `conftest.py` updated to match (async methods); the pre-existing `_BrokenMLClient` unavailability test needed no change since its synchronous `raise` happens before the `await` is ever reached.
+- **Stripe hardening**: `StripeClient` gained `is_configured`/`webhook_is_configured` properties (mirroring `EmailClient`/`OAuthClient`'s existing pattern), checked in both `billing_client.py` itself (fails fast with a `BillingError` before ever attempting a real Stripe API call with empty credentials) and again explicitly in the `billing.py` routes for a clear 503 rather than an incidental one. Previously an unconfigured server would still attempt a live network call to Stripe with an empty key and surface whatever `stripe.error.AuthenticationError` came back — functionally a 503 either way, but now fast and explicit rather than dependent on a real network round trip.
+- 8 new backend tests (unit tests directly against `StripeClient`, plus route-level 503 tests for both `checkout-session` and `webhook`) — full suite (127 tests) green throughout.
+- **Frontend Pricing page** rewritten off its fully-static mock: fetches `GET /billing/plans` on load. The Free tier's CTA and Enterprise's "Contact Sales" never depended on Stripe and are wired to real navigation; the Pro tier's button calls the real checkout-session endpoint against the first configured price when Stripe is set up, and shows "Coming soon" (disabled, with an explanatory caption) when the price map is empty — never a dead or misleading button either way. When more than one price is configured, an additional "Available Subscription Plans" section lists each real `price_id`/quota pair with its own working Subscribe button, since the marketing tiers (Free/Pro/Enterprise) don't have a stable 1:1 mapping to arbitrary admin-configured Stripe prices.
+- OAuth login wiring (Batch 2) re-verified as still correct and untouched — `/auth/oauth/providers` continues to drive disabled/labeled buttons on the login page.
+- Verified live against real Postgres with **zero Stripe/ml-service configuration**: `POST /translate` against a real (absent) ml-service correctly round-tripped a fast, clean 503 through the new async client instead of hanging; `GET /billing/plans` returned `[]`; `POST /billing/checkout-session` 503'd immediately without an outbound Stripe call. Re-ran with `STRIPE_PRICE_QUOTA_MAP` set but `STRIPE_SECRET_KEY` still empty — plans listed correctly, checkout-session still 503'd cleanly and fast rather than attempting (and failing) a real Stripe call.
+- ml-service itself untouched in this batch; its test suite was fully verified earlier in this backlog-clearance pass (19 tests, including the new `forced_terms` override tests from Batch 4's glossary work) and no ml-service files changed since.

@@ -11,9 +11,10 @@ import {
   YAxis,
 } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { api, ApiError, type AnalyticsSummary } from "@/lib/api";
+import { api, ApiError, type AnalyticsSummary, type GlobalAnalyticsSummary } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 
 const BRAND = "hsl(var(--brand))";
@@ -38,21 +39,37 @@ const StatTile = ({ label, value }: { label: string; value: string }) => (
 );
 
 const Analytics = () => {
-  const { token, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const isAdmin = user?.role?.name === "admin";
+  const [scope, setScope] = useState<"mine" | "global">("mine");
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
+  const [globalSummary, setGlobalSummary] = useState<GlobalAnalyticsSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!token) return;
+    if (!isAuthenticated) return;
     api
-      .getAnalyticsSummary(token)
+      .getAnalyticsSummary()
       .then(setSummary)
       .catch((err) => {
         const description = err instanceof ApiError ? err.message : String(err);
         toast({ title: "Failed to load analytics", description });
       })
       .finally(() => setLoading(false));
-  }, [token]);
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAdmin || scope !== "global" || globalSummary) return;
+    api.getGlobalAnalyticsSummary().catch((err) => {
+      const description = err instanceof ApiError ? err.message : String(err);
+      toast({ title: "Failed to load platform analytics", description });
+      return null;
+    }).then((data) => {
+      if (data) setGlobalSummary(data);
+    });
+  }, [isAdmin, scope, globalSummary]);
+
+  const activeSummary = scope === "global" ? globalSummary : summary;
 
   if (authLoading || loading) {
     return (
@@ -63,34 +80,56 @@ const Analytics = () => {
     );
   }
 
-  const totalFeedback = summary?.feedback_breakdown.reduce((sum, r) => sum + r.count, 0) ?? 0;
+  const totalFeedback = activeSummary?.feedback_breakdown.reduce((sum, r) => sum + r.count, 0) ?? 0;
   const ratingData = [1, 2, 3, 4, 5].map((rating) => ({
     rating: `${rating}★`,
-    count: summary?.feedback_breakdown.find((r) => r.rating === rating)?.count ?? 0,
+    count: activeSummary?.feedback_breakdown.find((r) => r.rating === rating)?.count ?? 0,
   }));
-  const pairData = (summary?.top_language_pairs ?? []).map((p) => ({
+  const pairData = (activeSummary?.top_language_pairs ?? []).map((p) => ({
     pair: `${p.source_lang ?? "auto"} → ${p.target_lang}`,
     count: p.count,
   }));
 
   return (
     <div className="container mx-auto px-4 py-16">
-      <div className="mb-12">
-        <h1 className="text-4xl font-bold tracking-tight mb-4">Your Translation Analytics</h1>
-        <p className="text-xl text-muted-foreground max-w-3xl">
-          A real accounting of your own usage — every number here comes from your saved
-          translation history, not a mockup.
-        </p>
+      <div className="mb-12 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+        <div>
+          <h1 className="text-4xl font-bold tracking-tight mb-4">
+            {scope === "global" ? "Platform Analytics" : "Your Translation Analytics"}
+          </h1>
+          <p className="text-xl text-muted-foreground max-w-3xl">
+            {scope === "global"
+              ? "Aggregated usage across every user on the platform — real data, not a projection."
+              : "A real accounting of your own usage — every number here comes from your saved translation history, not a mockup."}
+          </p>
+        </div>
+        {isAdmin && (
+          <Tabs value={scope} onValueChange={(v) => setScope(v as "mine" | "global")}>
+            <TabsList>
+              <TabsTrigger value="mine">My Analytics</TabsTrigger>
+              <TabsTrigger value="global">Platform-wide</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-        <StatTile label="Translations" value={String(summary?.total_translations ?? 0)} />
+        <StatTile label="Translations" value={String(activeSummary?.total_translations ?? 0)} />
         <StatTile
           label="Avg. confidence"
-          value={`${((summary?.average_confidence ?? 0) * 100).toFixed(0)}%`}
+          value={`${((activeSummary?.average_confidence ?? 0) * 100).toFixed(0)}%`}
         />
-        <StatTile label="Language pairs used" value={String(pairData.length)} />
-        <StatTile label="Feedback given" value={String(totalFeedback)} />
+        {scope === "global" && globalSummary ? (
+          <>
+            <StatTile label="Total users" value={String(globalSummary.total_users)} />
+            <StatTile label="Datasets contributed" value={String(globalSummary.total_datasets)} />
+          </>
+        ) : (
+          <>
+            <StatTile label="Language pairs used" value={String(pairData.length)} />
+            <StatTile label="Feedback given" value={String(totalFeedback)} />
+          </>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -100,9 +139,9 @@ const Analytics = () => {
             <CardDescription>Daily translation volume</CardDescription>
           </CardHeader>
           <CardContent>
-            {summary && summary.translations_by_day.length > 0 ? (
+            {activeSummary && activeSummary.translations_by_day.length > 0 ? (
               <ResponsiveContainer width="100%" height={240}>
-                <AreaChart data={summary.translations_by_day} margin={{ left: -20 }}>
+                <AreaChart data={activeSummary.translations_by_day} margin={{ left: -20 }}>
                   <defs>
                     <linearGradient id="translationsFill" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor={BRAND} stopOpacity={0.35} />

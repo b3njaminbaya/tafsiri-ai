@@ -1,30 +1,24 @@
 from collections import Counter
+from typing import Sequence
 
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .... import schemas
-from ....deps import get_current_active_user, get_db
-from ....models import Feedback, Translation
+from ....deps import get_current_active_user, get_db, require_role
+from ....models import Dataset, Feedback, Translation, User
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
 
-@router.get(
-    "/summary",
-    response_model=schemas.AnalyticsSummary,
-    summary="Personal translation analytics for the current user",
-)
-def analytics_summary(
-    db: Session = Depends(get_db),
-    user=Depends(get_current_active_user),
-):
+async def _summarize(db: AsyncSession, translations: Sequence[Translation]) -> schemas.AnalyticsSummary:
     # Aggregated in Python rather than with DB-side date-truncation SQL: SQLite
     # and Postgres don't share a portable CAST(... AS DATE)/date-trunc syntax
-    # via SQLAlchemy's generic layer, and at the scale of one user's translation
-    # history this is simple, correct, and fast enough. Revisit with DB-side
-    # aggregation if this ever needs to summarize translations across all users.
-    translations = db.query(Translation).filter(Translation.user_id == user.id).all()
+    # via SQLAlchemy's generic layer, and at the scale this runs at (one
+    # user's history, or the whole platform's) this is simple, correct, and
+    # fast enough. Revisit with DB-side aggregation if translation volume
+    # grows large enough for this to matter.
     total = len(translations)
     average_confidence = (
         sum(t.confidence for t in translations) / total if total else 0.0
@@ -45,11 +39,15 @@ def analytics_summary(
     translation_ids = [t.id for t in translations]
     if translation_ids:
         rating_rows = (
-            db.query(Feedback.rating)
-            .filter(Feedback.translation_id.in_(translation_ids))
+            (
+                await db.execute(
+                    select(Feedback.rating).where(Feedback.translation_id.in_(translation_ids))
+                )
+            )
+            .scalars()
             .all()
         )
-        rating_counts = Counter(rating for (rating,) in rating_rows)
+        rating_counts = Counter(rating_rows)
     feedback_breakdown = [
         schemas.RatingBreakdown(rating=r, count=c) for r, c in sorted(rating_counts.items())
     ]
@@ -60,4 +58,41 @@ def analytics_summary(
         translations_by_day=translations_by_day,
         top_language_pairs=top_language_pairs,
         feedback_breakdown=feedback_breakdown,
+    )
+
+
+@router.get(
+    "/summary",
+    response_model=schemas.AnalyticsSummary,
+    summary="Personal translation analytics for the current user",
+)
+async def analytics_summary(
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_active_user),
+):
+    translations = (
+        (await db.execute(select(Translation).where(Translation.user_id == user.id)))
+        .scalars()
+        .all()
+    )
+    return await _summarize(db, translations)
+
+
+@router.get(
+    "/global",
+    response_model=schemas.GlobalAnalyticsSummary,
+    summary="Platform-wide translation analytics (admin only)",
+)
+async def global_analytics_summary(
+    db: AsyncSession = Depends(get_db),
+    _admin=Depends(require_role("admin")),
+):
+    translations = (await db.execute(select(Translation))).scalars().all()
+    summary = await _summarize(db, translations)
+    total_users = (await db.execute(select(func.count(User.id)))).scalar_one()
+    total_datasets = (await db.execute(select(func.count(Dataset.id)))).scalar_one()
+    return schemas.GlobalAnalyticsSummary(
+        **summary.model_dump(),
+        total_users=total_users,
+        total_datasets=total_datasets,
     )

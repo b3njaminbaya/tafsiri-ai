@@ -1,6 +1,8 @@
+from sqlalchemy import select
+
 from app.models import APIKey
 
-from .conftest import TestingSessionLocal
+from .conftest import run_db
 from .helpers import auth_headers, register_and_login
 
 
@@ -50,11 +52,12 @@ def test_api_key_quota_is_enforced(client):
 
     # No API endpoint sets quota_limit yet, so we reach into the DB directly —
     # same rationale as the admin-promotion test fixture.
-    db = TestingSessionLocal()
-    db_key = db.query(APIKey).filter(APIKey.id == key["id"]).first()
-    db_key.quota_limit = 1
-    db.commit()
-    db.close()
+    async def _set_quota(db):
+        db_key = (await db.execute(select(APIKey).where(APIKey.id == key["id"]))).scalar_one()
+        db_key.quota_limit = 1
+        await db.commit()
+
+    run_db(_set_quota)
 
     ok = client.post(
         "/api/v1/translate/",

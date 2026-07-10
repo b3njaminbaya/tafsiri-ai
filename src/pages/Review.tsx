@@ -9,7 +9,7 @@ import { api, ApiError, type TranslationRecord } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 
 const Review = () => {
-  const { token, user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [queue, setQueue] = useState<TranslationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [drafts, setDrafts] = useState<Record<number, string>>({});
@@ -18,10 +18,9 @@ const Review = () => {
   const canReview = user?.role?.name === "translator" || user?.role?.name === "admin";
 
   const loadQueue = async () => {
-    if (!token) return;
     try {
       setLoading(true);
-      const data = await api.getReviewQueue(token);
+      const data = await api.getReviewQueue();
       setQueue(data);
     } catch (err) {
       const description = err instanceof ApiError ? err.message : String(err);
@@ -34,11 +33,9 @@ const Review = () => {
   useEffect(() => {
     if (canReview) loadQueue();
     else setLoading(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, canReview]);
+  }, [canReview]);
 
   const submitCorrection = async (translationId: number) => {
-    if (!token) return;
     const correctedText = drafts[translationId]?.trim();
     if (!correctedText) {
       toast({ title: "Enter a corrected translation first" });
@@ -46,7 +43,7 @@ const Review = () => {
     }
     try {
       setSubmitting(translationId);
-      await api.submitCorrection(translationId, { corrected_text: correctedText }, token);
+      await api.submitCorrection(translationId, { corrected_text: correctedText });
       toast({ title: "Correction submitted" });
       setQueue((prev) => prev.filter((t) => t.id !== translationId));
     } catch (err) {

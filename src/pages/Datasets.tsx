@@ -32,7 +32,7 @@ function formatSize(bytes: number): string {
 }
 
 const Datasets = () => {
-  const { token, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [datasets, setDatasets] = useState<DatasetRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -85,14 +85,14 @@ const Datasets = () => {
   };
 
   const handleUpload = async () => {
-    if (!token) return;
+    if (!isAuthenticated) return;
     if (!uploadForm.name || !uploadFile) {
       toast({ title: "Name and file are required" });
       return;
     }
     try {
       setUploading(true);
-      await api.uploadDataset({ ...uploadForm, file: uploadFile }, token);
+      await api.uploadDataset({ ...uploadForm, file: uploadFile });
       toast({ title: "Dataset uploaded" });
       setUploadOpen(false);
       setUploadForm({ name: "", description: "", source_lang: "", target_lang: "", domain: "" });
@@ -258,8 +258,12 @@ const Datasets = () => {
                   <Input
                     id="ds-file"
                     type="file"
+                    accept=".tsv,.csv,.txt,.json,.jsonl,.tmx,.xliff,.xlf"
                     onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Accepted formats: TSV, CSV, TXT, JSON, JSONL, TMX, XLIFF
+                  </p>
                 </div>
               </div>
               <DialogFooter>
