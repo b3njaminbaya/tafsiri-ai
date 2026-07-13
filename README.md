@@ -1,6 +1,7 @@
-# NMT Agent for Low-Resource Languages
+# Tafsiri AI
 
-A full-stack neural machine translation platform focused on low-resource African
+_Tafsiri_ is Swahili for "translation." A full-stack neural machine
+translation platform focused on low-resource African
 and Sub-Saharan languages (Swahili, Amharic, Hausa, Igbo, Yoruba, Zulu, Xhosa,
 Somali, Lingala, Wolof, Fulah, Ganda) alongside major world languages, with
 real persistence, a trained multilingual model, and the account/community/

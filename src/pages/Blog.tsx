@@ -32,7 +32,7 @@ const Blog = () => {
   return (
     <div className="container mx-auto px-4 py-16">
       <div className="text-center mb-16">
-        <h1 className="text-4xl font-bold tracking-tight mb-4">NMT Platform Blog</h1>
+        <h1 className="text-4xl font-bold tracking-tight mb-4">Tafsiri AI Blog</h1>
         <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
           Updates, research notes, and tutorials from the team.
         </p>

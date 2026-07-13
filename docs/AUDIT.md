@@ -1,4 +1,9 @@
-# NMT Agent — Engineering & Commercialization Audit
+# Tafsiri AI — Engineering & Commercialization Audit
+
+_Note: this project was originally named "NMT Agent for Low-Resource
+Languages"; it was renamed to Tafsiri AI on 2026-07-11. Historical entries
+below predating the rename refer to the old name where they quote code or
+commit messages verbatim._
 
 _Prepared 2026-07-10, against commit `46cbd2b`. A live, styled version of this report was published as a Claude Artifact during the review session; this file is the reference copy kept in-repo._
 

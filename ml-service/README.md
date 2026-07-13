@@ -1,6 +1,6 @@
 # ML Service
 
-Model-serving microservice for the NMT Agent. Wraps a Hugging Face
+Model-serving microservice for Tafsiri AI. Wraps a Hugging Face
 multilingual translation model (`facebook/m2m100_418M` by default) behind a
 small FastAPI surface consumed by the backend's `/api/v1/translate` route.
 

@@ -74,7 +74,7 @@ services:
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
-      SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS:-noreply@nmtagent.local}
+      SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS:-noreply@tafsiri.ai}
       # Google/GitHub OAuth login — each is disabled (and its frontend button
       # shown as unavailable) unless both its client id and secret are set.
       # See backend/README.md.

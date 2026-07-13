@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    app_name: str = "NMT Agent API"
+    app_name: str = "Tafsiri AI API"
     environment: str = "development"
     secret_key: str = os.getenv("SECRET_KEY", "dev-secret-change-me")
     algorithm: str = "HS256"
@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     smtp_port: int = int(os.getenv("SMTP_PORT", "587"))
     smtp_username: str = os.getenv("SMTP_USERNAME", "")
     smtp_password: str = os.getenv("SMTP_PASSWORD", "")
-    smtp_from_address: str = os.getenv("SMTP_FROM_ADDRESS", "noreply@nmtagent.local")
+    smtp_from_address: str = os.getenv("SMTP_FROM_ADDRESS", "noreply@tafsiri.ai")
 
     ml_service_url: str = os.getenv("ML_SERVICE_URL", "http://localhost:8001")
     ml_service_timeout_seconds: float = float(os.getenv("ML_SERVICE_TIMEOUT_SECONDS", "30"))

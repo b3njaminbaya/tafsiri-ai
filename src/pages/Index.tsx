@@ -29,11 +29,11 @@ const Index = () => {
               Advanced Neural Machine Translation
             </Badge>
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              NMT Agent for Low-Resource Languages
+              Tafsiri AI
             </h1>
             <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-8 leading-relaxed">
-              Breakthrough translation technology powered by transfer learning, few-shot adaptation, and active learning. 
-              Bridge language barriers for underserved communities worldwide.
+              Neural machine translation for low-resource languages, powered by transfer learning, few-shot
+              adaptation, and active learning. Bridge language barriers for underserved communities worldwide.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
               <Button size="lg" className="text-lg px-8 py-6" asChild>

@@ -1,4 +1,4 @@
-# Backend — NMT Agent API
+# Backend — Tafsiri AI API
 
 FastAPI service: auth (cookie-based, OAuth, password reset, email
 verification)/roles/API keys, translation (proxied to `ml-service`, cached in

@@ -36,7 +36,7 @@ const NavBar = () => {
           <div className="flex items-center justify-center w-8 h-8 bg-primary rounded-lg">
             <Brain className="w-5 h-5 text-primary-foreground" />
           </div>
-          <span className="text-lg">NMT Agent</span>
+          <span className="text-lg">Tafsiri AI</span>
         </Link>
 
         {/* Desktop Navigation */}
@@ -87,7 +87,7 @@ const NavBar = () => {
                 <div className="flex items-center justify-center w-8 h-8 bg-primary rounded-lg">
                   <Brain className="w-5 h-5 text-primary-foreground" />
                 </div>
-                <span className="text-lg">NMT Agent</span>
+                <span className="text-lg">Tafsiri AI</span>
               </Link>
               
               <nav className="flex flex-col space-y-4">

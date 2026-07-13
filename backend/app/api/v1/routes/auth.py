@@ -116,7 +116,7 @@ async def register(
     verify_link = f"{settings.frontend_base_url}/verify-email?token={verify_token}"
     email_client.send(
         user.email,
-        "Verify your NMT Agent account",
+        "Verify your Tafsiri AI account",
         f"Welcome! Verify your email by visiting:\n\n{verify_link}\n\nThis link expires in 24 hours.",
     )
 
@@ -325,7 +325,7 @@ async def forgot_password(
         reset_link = f"{settings.frontend_base_url}/reset-password?token={reset_token}"
         email_client.send(
             user.email,
-            "Reset your NMT Agent password",
+            "Reset your Tafsiri AI password",
             f"Reset your password by visiting:\n\n{reset_link}\n\n"
             "This link expires in 1 hour. If you didn't request this, ignore this email.",
         )
@@ -366,7 +366,7 @@ async def resend_verification(
     verify_link = f"{settings.frontend_base_url}/verify-email?token={verify_token}"
     email_client.send(
         current_user.email,
-        "Verify your NMT Agent account",
+        "Verify your Tafsiri AI account",
         f"Verify your email by visiting:\n\n{verify_link}\n\nThis link expires in 24 hours.",
     )
     return {"message": "Verification email sent"}

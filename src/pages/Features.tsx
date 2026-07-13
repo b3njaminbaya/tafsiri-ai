@@ -61,7 +61,7 @@ const Features = () => {
           Powerful Features for Modern Translation
         </h1>
         <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-          Discover the comprehensive suite of features that make our NMT platform the choice of enterprises worldwide.
+          Discover the comprehensive suite of features that make Tafsiri AI the choice of enterprises worldwide.
         </p>
       </div>
 

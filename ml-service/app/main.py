@@ -52,7 +52,7 @@ SUPPORTED_LANGUAGES = {
     "lg": "Ganda",
 }
 
-app = FastAPI(title="NMT Agent ML Service", version="0.1.0")
+app = FastAPI(title="Tafsiri AI ML Service", version="0.1.0")
 
 _model = None
 _tokenizer = None

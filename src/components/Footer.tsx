@@ -17,7 +17,7 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Company Info */}
           <div className="space-y-4">
-            <h3 className="font-semibold text-lg">NMT Agent</h3>
+            <h3 className="font-semibold text-lg">Tafsiri AI</h3>
             <p className="text-sm text-muted-foreground">
               Breaking language barriers with advanced neural machine translation for low-resource languages.
             </p>
@@ -47,7 +47,7 @@ const Footer = () => {
                 <Linkedin className="w-5 h-5" />
               </a>
               <a 
-                href="mailto:contact@nmtagent.com" 
+                href="mailto:contact@tafsiri.ai"
                 className="text-muted-foreground hover:text-primary transition-colors"
               >
                 <Mail className="w-5 h-5" />
@@ -126,7 +126,7 @@ const Footer = () => {
         
         <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           <div className="text-sm text-muted-foreground">
-            © 2024 NMT Agent. All rights reserved.
+            © 2026 Tafsiri AI. All rights reserved.
           </div>
           <div className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground">
             <span>Built with ❤️ for underserved communities</span>

@@ -72,7 +72,7 @@ const Login = () => {
     <div className="min-h-[calc(100vh-140px)] bg-background flex items-center justify-center">
       <div className="container mx-auto max-w-md py-12">
         <h1 className="text-3xl font-bold mb-2">{mode === "login" ? "Log in" : "Create an account"}</h1>
-        <p className="text-muted-foreground mb-6">Access the NMT Agent platform.</p>
+        <p className="text-muted-foreground mb-6">Access the Tafsiri AI platform.</p>
         <div className="rounded-lg border p-6">
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">

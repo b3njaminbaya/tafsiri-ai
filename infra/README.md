@@ -1,4 +1,4 @@
-# NMT Agent Infrastructure and Development
+# Tafsiri AI Infrastructure and Development
 
 This folder contains infrastructure configuration for local development and
 docker-compose-based deployment.

@@ -43,7 +43,7 @@ const Support = () => {
 
   const faqs = [
     {
-      question: "How do I get started with the NMT Platform API?",
+      question: "How do I get started with the Tafsiri AI API?",
       answer: "Getting started is easy! First, create an account and generate your API key from the dashboard. Then, check our Quick Start guide in the documentation for code examples in multiple programming languages. You can also use our interactive API explorer to test endpoints before implementing them in your application."
     },
     {

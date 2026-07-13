@@ -81,7 +81,7 @@ app = FastAPI(
     title=settings.app_name,
     version="0.2.0",
     openapi_tags=tags_metadata,
-    description="API for the NMT Agent for Low-Resource Languages.",
+    description="API for Tafsiri AI — neural machine translation for low-resource languages.",
 )
 
 app.add_middleware(
