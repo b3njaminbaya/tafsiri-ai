@@ -36,9 +36,17 @@ jobs:
         with:
           python-version: "3.11"
           cache: "pip"
-          cache-dependency-path: ml-service/requirements-dev.txt
+          cache-dependency-path: |
+            ml-service/requirements-dev.txt
+            ml-service/requirements-training.txt
       - name: Install dependencies
-        run: pip install -r requirements-dev.txt
+        # requirements-training.txt too: tests/test_training_*.py import the
+        # training pipeline (peft, sacrebleu, ...) directly, and those
+        # packages are deliberately absent from requirements-dev.txt/the
+        # serving image itself (see requirements-training.txt's own
+        # docstring) — CI still needs them installed to collect and run
+        # those test modules at all.
+        run: pip install -r requirements-dev.txt -r requirements-training.txt
       - name: Run tests
         # Downloads a tiny (few-MB) random-weight test checkpoint that shares
         # the production model's architecture/tokenizer — verifies the real
