@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Sidebar,
@@ -33,7 +34,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Loader2, Trash2, Users, BookOpen, Languages } from "lucide-react";
+import { ArrowLeft, Loader2, Trash2, Users, BookOpen, Languages } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   api,
@@ -561,9 +562,23 @@ const Admin = () => {
     // already sits inside App.tsx's <main className="flex-1">. Two nested
     // <main> landmarks is invalid HTML/bad a11y, so this hand-rolls the
     // equivalent layout on a plain div instead.
-    <SidebarProvider className="min-h-[calc(100vh-4rem)]">
+    //
+    // App.tsx hides the site NavBar/Footer on /admin entirely — the
+    // sidebar below is `fixed inset-y-0` (full viewport height,
+    // scroll-independent), which fought with the sticky NavBar for the
+    // same top strip and visually covered the Footer whenever it scrolled
+    // into view underneath. Since there's no NavBar height to subtract
+    // now, this is a plain min-h-screen instead of 100vh-4rem.
+    <SidebarProvider className="min-h-screen">
       <Sidebar collapsible="icon">
         <SidebarHeader>
+          <Link
+            to="/"
+            className="flex items-center gap-2 px-2 py-1 text-sm text-muted-foreground hover:text-brand transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Tafsiri AI
+          </Link>
           <h2 className="font-semibold px-2 py-1">Admin Panel</h2>
         </SidebarHeader>
         <SidebarContent>
@@ -587,7 +602,7 @@ const Admin = () => {
           {/* Room for a future "Overview" group with summary stat cards. */}
         </SidebarContent>
       </Sidebar>
-      <div className="flex min-h-[calc(100vh-4rem)] flex-1 flex-col bg-background">
+      <div className="flex min-h-screen flex-1 flex-col bg-background">
         <div className="p-6 md:p-10 space-y-6">
           <div className="flex items-center gap-3">
             <SidebarTrigger className="md:hidden" />

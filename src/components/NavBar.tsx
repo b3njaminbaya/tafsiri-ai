@@ -29,7 +29,7 @@ const NavBar = () => {
   ];
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="dark sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90">
       <div className="container flex items-center justify-between py-4">
         {/* Logo */}
         <Link to="/" className="flex items-center space-x-2 font-semibold tracking-tight">
@@ -77,7 +77,7 @@ const NavBar = () => {
               <Menu className="w-5 h-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-[300px]">
+          <SheetContent side="right" className="dark w-[300px]">
             <div className="flex flex-col space-y-6 mt-6">
               <Link 
                 to="/" 

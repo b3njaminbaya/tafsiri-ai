@@ -2,11 +2,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
 import CookieConsent from "@/components/CookieConsent";
+import ScrollToTop from "@/components/ScrollToTop";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -40,6 +41,103 @@ import PrivacySettings from "./pages/PrivacySettings";
 
 const queryClient = new QueryClient();
 
+// The admin dashboard is its own full-height sidebar layout (see
+// Admin.tsx) — the marketing site's sticky NavBar and Footer don't fit
+// alongside a fixed, full-viewport-height sidebar without overlapping it,
+// so both are hidden on /admin. Admin.tsx's own sidebar header links back
+// to the main site instead.
+const AppShell = () => {
+  const { pathname } = useLocation();
+  const isAdminRoute = pathname.startsWith("/admin");
+
+  return (
+    <>
+      <ScrollToTop />
+      <div className="flex flex-col min-h-screen">
+        {!isAdminRoute && <NavBar />}
+        <main className="flex-1">
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route
+              path="/translate"
+              element={
+                <ProtectedRoute>
+                  <Translate />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/review"
+              element={
+                <ProtectedRoute>
+                  <Review />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/analytics"
+              element={
+                <ProtectedRoute>
+                  <Analytics />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/features" element={<Features />} />
+            <Route path="/api-docs" element={<ApiDocs />} />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/datasets" element={<Datasets />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms-of-service" element={<TermsOfService />} />
+            <Route path="/cookie-policy" element={<CookiePolicy />} />
+            <Route path="/gdpr-compliance" element={<GdprCompliance />} />
+            <Route path="/security" element={<Security />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/accessibility" element={<Accessibility />} />
+            <Route path="/community" element={<Community />} />
+            <Route path="/community/posts/:postId" element={<ForumPost />} />
+            <Route path="/status" element={<SystemStatus />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:slug" element={<BlogPostDetail />} />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute adminOnly>
+                  <Admin />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/support" element={<Support />} />
+            <Route
+              path="/gdpr-request"
+              element={
+                <ProtectedRoute>
+                  <GdprRequest />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/privacy-settings"
+              element={
+                <ProtectedRoute>
+                  <PrivacySettings />
+                </ProtectedRoute>
+              }
+            />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </main>
+        {!isAdminRoute && <Footer />}
+      </div>
+      <CookieConsent />
+    </>
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -47,87 +145,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <div className="flex flex-col min-h-screen">
-            <NavBar />
-            <main className="flex-1">
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="/verify-email" element={<VerifyEmail />} />
-                <Route
-                  path="/translate"
-                  element={
-                    <ProtectedRoute>
-                      <Translate />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/review"
-                  element={
-                    <ProtectedRoute>
-                      <Review />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/analytics"
-                  element={
-                    <ProtectedRoute>
-                      <Analytics />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route path="/features" element={<Features />} />
-                <Route path="/api-docs" element={<ApiDocs />} />
-                <Route path="/pricing" element={<Pricing />} />
-                <Route path="/datasets" element={<Datasets />} />
-                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                <Route path="/terms-of-service" element={<TermsOfService />} />
-                <Route path="/cookie-policy" element={<CookiePolicy />} />
-                <Route path="/gdpr-compliance" element={<GdprCompliance />} />
-                <Route path="/security" element={<Security />} />
-                <Route path="/contact" element={<Contact />} />
-                <Route path="/accessibility" element={<Accessibility />} />
-                <Route path="/community" element={<Community />} />
-                <Route path="/community/posts/:postId" element={<ForumPost />} />
-                <Route path="/status" element={<SystemStatus />} />
-                <Route path="/blog" element={<Blog />} />
-                <Route path="/blog/:slug" element={<BlogPostDetail />} />
-                <Route
-                  path="/admin"
-                  element={
-                    <ProtectedRoute adminOnly>
-                      <Admin />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route path="/support" element={<Support />} />
-                <Route
-                  path="/gdpr-request"
-                  element={
-                    <ProtectedRoute>
-                      <GdprRequest />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/privacy-settings"
-                  element={
-                    <ProtectedRoute>
-                      <PrivacySettings />
-                    </ProtectedRoute>
-                  }
-                />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </main>
-            <Footer />
-          </div>
-          <CookieConsent />
+          <AppShell />
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

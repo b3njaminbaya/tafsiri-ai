@@ -1,18 +1,10 @@
 import { Link } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
-import {
-  Github,
-  Twitter,
-  Linkedin,
-  Mail,
-  Globe,
-  Shield,
-  HelpCircle
-} from "lucide-react";
+import { Github, Twitter, Linkedin, Mail } from "lucide-react";
 
 const Footer = () => {
   return (
-    <footer className="bg-background border-t">
+    <footer className="dark bg-background border-t">
       <div className="container py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Company Info */}
@@ -81,12 +73,10 @@ const Footer = () => {
           <div className="space-y-4">
             <h4 className="font-semibold">Resources</h4>
             <div className="space-y-2">
-              <Link to="/blog" className="block text-sm text-muted-foreground hover:text-brand transition-colors flex items-center">
-                <Globe className="w-4 h-4 mr-2" />
+              <Link to="/blog" className="block text-sm text-muted-foreground hover:text-brand transition-colors">
                 Blog
               </Link>
-              <Link to="/support" className="block text-sm text-muted-foreground hover:text-brand transition-colors flex items-center">
-                <HelpCircle className="w-4 h-4 mr-2" />
+              <Link to="/support" className="block text-sm text-muted-foreground hover:text-brand transition-colors">
                 Support
               </Link>
               <Link to="/community" className="block text-sm text-muted-foreground hover:text-brand transition-colors">
@@ -102,8 +92,7 @@ const Footer = () => {
           <div className="space-y-4">
             <h4 className="font-semibold">Legal</h4>
             <div className="space-y-2">
-              <Link to="/privacy-policy" className="block text-sm text-muted-foreground hover:text-brand transition-colors flex items-center">
-                <Shield className="w-4 h-4 mr-2" />
+              <Link to="/privacy-policy" className="block text-sm text-muted-foreground hover:text-brand transition-colors">
                 Privacy Policy
               </Link>
               <Link to="/terms-of-service" className="block text-sm text-muted-foreground hover:text-brand transition-colors">
@@ -129,7 +118,7 @@ const Footer = () => {
             © 2026 Tafsiri AI. All rights reserved.
           </div>
           <div className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground">
-            <span>Built with ❤️ for underserved communities</span>
+            <span>Built for underserved communities</span>
             <Link to="/accessibility" className="hover:text-brand transition-colors">
               Accessibility
             </Link>
