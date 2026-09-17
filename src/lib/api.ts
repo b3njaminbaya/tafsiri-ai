@@ -16,6 +16,18 @@ export interface TokenResponse {
   token_type: string;
 }
 
+export interface SupportedLanguage {
+  code: string;
+  name: string;
+  kenyan: boolean;
+}
+
+export interface RoadmapLanguage {
+  code: string | null;
+  name: string;
+  family: string;
+}
+
 export interface TranslateRequest {
   text: string;
   source_lang?: string;
@@ -256,13 +268,46 @@ export interface Plan {
   quota_limit: number;
 }
 
+export interface ApiKey {
+  id: number;
+  key_prefix: string;
+  is_active: boolean;
+  quota_used: number;
+  quota_limit?: number | null;
+  created_at: string;
+}
+
+export interface ApiKeyCreateResponse {
+  message: string;
+  api_key: ApiKey;
+  key: string;
+}
+
 export interface DataExport {
   user: AuthUser;
   translations: TranslationRecord[];
   feedback_given: FeedbackRecord[];
   corrections_given: CorrectionRecord[];
   datasets_uploaded: DatasetRecord[];
-  api_keys: unknown[];
+  api_keys: ApiKey[];
+}
+
+export interface ContactMessageInput {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+}
+
+export interface DependencyStatus {
+  status: "operational" | "degraded" | "down";
+  detail?: string | null;
+}
+
+export interface SystemStatus {
+  status: "operational" | "degraded" | "down";
+  checked_at: string;
+  dependencies: Record<string, DependencyStatus>;
 }
 
 class ApiError extends Error {
@@ -298,7 +343,20 @@ async function request<T>(
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new ApiError(res.status, text || `Request failed with status ${res.status}`);
+    // FastAPI error bodies are `{"detail": "..."}` — surface that message
+    // directly instead of the raw JSON blob, which every error toast in
+    // this app would otherwise render verbatim (e.g. `{"detail":"Not
+    // authenticated"}` shown as-is to the user).
+    let message = text || `Request failed with status ${res.status}`;
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed && typeof parsed.detail === "string") {
+        message = parsed.detail;
+      }
+    } catch {
+      // Not JSON — keep the raw text as the message.
+    }
+    throw new ApiError(res.status, message);
   }
 
   if (res.status === 204) return undefined as T;
@@ -381,6 +439,10 @@ export const api = {
 
   listGdprRequests: (token?: string | null) =>
     request<GdprRequestRecord[]>("/privacy/gdpr-requests", {}, token),
+
+  getLanguages: () => request<{ languages: SupportedLanguage[] }>("/languages"),
+
+  getLanguagesRoadmap: () => request<{ languages: RoadmapLanguage[] }>("/languages/roadmap"),
 
   translate: (payload: TranslateRequest, token?: string | null) =>
     request<TranslateResponse>(
@@ -518,6 +580,19 @@ export const api = {
 
   deleteGlossaryTerm: (termId: number) =>
     request<{ message: string }>(`/glossary/${termId}`, { method: "DELETE" }),
+
+  submitContactMessage: (payload: ContactMessageInput) =>
+    request<{ id: number }>("/contact/", { method: "POST", body: JSON.stringify(payload) }),
+
+  getSystemStatus: () => request<SystemStatus>("/status"),
+
+  listApiKeys: (token?: string | null) => request<ApiKey[]>("/auth/api-keys", {}, token),
+
+  createApiKey: (token?: string | null) =>
+    request<ApiKeyCreateResponse>("/auth/api-keys", { method: "POST" }, token),
+
+  revokeApiKey: (keyId: number, token?: string | null) =>
+    request<{ message: string }>(`/auth/api-keys/${keyId}/revoke`, { method: "POST" }, token),
 };
 
 export { ApiError };

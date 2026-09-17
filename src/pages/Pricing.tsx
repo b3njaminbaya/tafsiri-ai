@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,26 +15,21 @@ const marketingPlans = [
     period: "/month",
     description: "Perfect for testing and small projects",
     features: [
-      "1,000 characters/month",
-      "50+ language pairs",
-      "Basic translation quality",
-      "Email support",
-      "Rate limit: 10 req/min",
+      "Full language coverage, including low-resource African languages",
+      "Standard API rate limits",
+      "Community forum support",
     ],
   },
   {
     name: "Pro",
-    price: "$49",
-    period: "/month",
-    description: "Ideal for businesses and developers",
+    price: "Varies",
+    period: "",
+    description: "Higher API quota for businesses and developers",
     features: [
-      "500,000 characters/month",
-      "100+ language pairs",
-      "High-quality translation",
-      "Priority email support",
-      "Rate limit: 100 req/min",
-      "Custom models",
-      "Translation analytics",
+      "Higher API usage quota (see plans below)",
+      "Full language coverage",
+      "Domain-specific glossary terminology forcing",
+      "Translation analytics dashboard",
     ],
     popular: true,
   },
@@ -42,26 +37,14 @@ const marketingPlans = [
     name: "Enterprise",
     price: "Custom",
     period: "",
-    description: "For large-scale enterprise deployments",
+    description: "For large-scale deployments",
     features: [
-      "Unlimited characters",
-      "All language pairs",
-      "Premium translation quality",
-      "24/7 phone & email support",
-      "Custom rate limits",
-      "Dedicated models",
-      "Advanced analytics",
-      "SLA guarantee",
-      "On-premise deployment",
+      "Custom API quota",
+      "Full language coverage",
+      "Priority support",
+      "Talk to us about your specific needs",
     ],
   },
-];
-
-const usagePricing = [
-  { range: "0 - 1M characters", price: "$0.50", unit: "per 10K characters" },
-  { range: "1M - 10M characters", price: "$0.40", unit: "per 10K characters" },
-  { range: "10M - 100M characters", price: "$0.30", unit: "per 10K characters" },
-  { range: "100M+ characters", price: "$0.20", unit: "per 10K characters" },
 ];
 
 const Pricing = () => {
@@ -71,6 +54,7 @@ const Pricing = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [checkingOut, setCheckingOut] = useState<string | null>(null);
+  const plansSectionRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     api
@@ -156,15 +140,30 @@ const Pricing = () => {
                     className="w-full"
                     variant="default"
                     disabled={!billingConfigured || loadingPlans}
-                    onClick={() => billingConfigured && subscribe(plans[0].price_id)}
+                    onClick={() => {
+                      if (!billingConfigured) return;
+                      // There's no stable mapping between this fixed marketing
+                      // tier and an arbitrary admin-configured Stripe price —
+                      // if there's exactly one real plan it's unambiguous, but
+                      // with more than one, guessing (e.g. always plans[0])
+                      // could subscribe someone to a plan other than the one
+                      // shown here. Send them to the real, named list instead.
+                      if (plans.length === 1) {
+                        subscribe(plans[0].price_id);
+                      } else {
+                        plansSectionRef.current?.scrollIntoView({ behavior: "smooth" });
+                      }
+                    }}
                   >
                     {loadingPlans
                       ? "Loading..."
-                      : billingConfigured
-                        ? checkingOut === plans[0]?.price_id
-                          ? "Redirecting..."
-                          : "Subscribe"
-                        : "Coming soon"}
+                      : !billingConfigured
+                        ? "Coming soon"
+                        : plans.length === 1
+                          ? checkingOut === plans[0]?.price_id
+                            ? "Redirecting..."
+                            : "Subscribe"
+                          : "View plans"}
                   </Button>
                   {!loadingPlans && !billingConfigured && (
                     <p className="text-xs text-muted-foreground text-center">
@@ -179,7 +178,7 @@ const Pricing = () => {
       </div>
 
       {billingConfigured && plans.length > 1 && (
-        <div className="max-w-4xl mx-auto mb-16">
+        <div ref={plansSectionRef} className="max-w-4xl mx-auto mb-16 scroll-mt-24">
           <h2 className="text-2xl font-bold text-center mb-6">Available Subscription Plans</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {plans.map((plan) => (
@@ -203,33 +202,6 @@ const Pricing = () => {
           </div>
         </div>
       )}
-
-      <div className="max-w-4xl mx-auto">
-        <h2 className="text-3xl font-bold text-center mb-8">Usage-Based Pricing</h2>
-        <Card>
-          <CardHeader>
-            <CardTitle>Pay-as-you-scale pricing tiers</CardTitle>
-            <CardDescription>
-              Our usage-based pricing scales with your needs, offering better rates as your volume increases.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {usagePricing.map((tier) => (
-                <div key={tier.range} className="flex justify-between items-center py-3 border-b last:border-b-0">
-                  <div>
-                    <span className="font-semibold">{tier.range}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-2xl font-bold text-primary">{tier.price}</span>
-                    <span className="text-sm text-muted-foreground ml-2">{tier.unit}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       <div className="text-center mt-16 space-y-4">
         <h3 className="text-2xl font-semibold">Need a custom solution?</h3>

@@ -1,3 +1,5 @@
+from secrets import token_urlsafe
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,8 +8,9 @@ from .... import schemas
 from ....billing_client import BillingError, StripeClient, get_stripe_client
 from ....core.config import settings
 from ....deps import get_current_active_user, get_db
+from ....email_client import EmailClient, get_email_client
 from ....models import APIKey, User
-from ....security import normalize_email
+from ....security import hash_api_key, normalize_email
 
 router = APIRouter(prefix="/billing", tags=["billing"])
 
@@ -61,6 +64,7 @@ async def stripe_webhook(
     request: Request,
     db: AsyncSession = Depends(get_db),
     stripe_client: StripeClient = Depends(get_stripe_client),
+    email_client: EmailClient = Depends(get_email_client),
 ):
     if not stripe_client.webhook_is_configured:
         raise HTTPException(
@@ -89,19 +93,47 @@ async def stripe_webhook(
                 )
             ).scalar_one_or_none()
             if user:
-                keys = (
+                # The plan a customer just paid for is one entitlement for
+                # their account, not "give every key they happen to own the
+                # full new quota" (the old behavior, which let a user with N
+                # keys multiply one purchase into N times the quota). Apply
+                # it to a single key: their most-recently-created active one.
+                existing_keys = (
                     (
                         await db.execute(
-                            select(APIKey).where(
-                                APIKey.user_id == user.id, APIKey.is_active.is_(True)
-                            )
+                            select(APIKey)
+                            .where(APIKey.user_id == user.id, APIKey.is_active.is_(True))
+                            .order_by(APIKey.created_at.desc(), APIKey.id.desc())
                         )
                     )
                     .scalars()
                     .all()
                 )
-                for key in keys:
-                    key.quota_limit = quota_limit
+                if existing_keys:
+                    existing_keys[0].quota_limit = quota_limit
+                else:
+                    # A customer can subscribe before ever creating an API
+                    # key — the old code silently granted nothing in that
+                    # case (payment succeeded, entitlement vanished). Mint
+                    # one now and email the raw secret, since a webhook has
+                    # no user-facing response to return it in.
+                    raw_key = token_urlsafe(32)
+                    new_key = APIKey(
+                        hashed_key=hash_api_key(raw_key),
+                        key_prefix=raw_key[:10],
+                        user_id=user.id,
+                        quota_limit=quota_limit,
+                        is_active=True,
+                    )
+                    db.add(new_key)
+                    email_client.send(
+                        user.email,
+                        "Your Tafsiri AI API key",
+                        "Thanks for subscribing! Here is your new API key:\n\n"
+                        f"{raw_key}\n\n"
+                        "Keep it secret — it will not be shown again. You can "
+                        "revoke it and create new ones from your account at any time.",
+                    )
                 await db.commit()
 
     return {"received": True}

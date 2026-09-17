@@ -1,13 +1,21 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .... import schemas
 from ....cache import CacheClient, get_cache_client
-from ....deps import get_current_user_or_api_key, get_db
+from ....core.limiter import limiter
+from ....deps import (
+    consume_api_key_quota,
+    get_api_key,
+    get_current_user_or_api_key,
+    get_db,
+    refund_api_key_quota,
+)
 from ....glossary import resolve_forced_terms
 from ....ml_client import MLServiceClient, MLServiceError, get_ml_client
-from ....models import Feedback, Translation
+from ....models import APIKey, Feedback, Translation
+from typing import Optional
 
 router = APIRouter(prefix="/translate", tags=["translation"])
 
@@ -17,9 +25,12 @@ router = APIRouter(prefix="/translate", tags=["translation"])
     response_model=schemas.TranslateResponse,
     summary="Translate text via ml-service. Accepts a JWT bearer token or an X-API-Key header.",
 )
+@limiter.limit("60/minute")
 async def translate(
+    request: Request,
     req: schemas.TranslateRequest,
     user=Depends(get_current_user_or_api_key),
+    api_key: Optional[APIKey] = Depends(get_api_key),
     db: AsyncSession = Depends(get_db),
     ml_client: MLServiceClient = Depends(get_ml_client),
     cache: CacheClient = Depends(get_cache_client),
@@ -30,12 +41,15 @@ async def translate(
     # rather than re-running inference for an answer already computed. Still
     # persisted as a normal Translation row below: caching the model call is
     # an implementation detail, not something that should hide a user's own
-    # history of what they translated and when.
+    # history of what they translated and when. A cache hit never touches
+    # ml-service, so it never consumes API-key quota either.
     cache_key = CacheClient.translation_key(req.text, req.source_lang, req.target_lang, req.domain)
     result = cache.get(cache_key)
     cache_hit = result is not None
 
     if result is None:
+        if not await consume_api_key_quota(api_key, db):
+            raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="API key quota exceeded")
         forced_terms = await resolve_forced_terms(
             db, req.domain, req.source_lang, req.target_lang, req.text
         )
@@ -44,10 +58,20 @@ async def translate(
                 req.text, req.target_lang, req.source_lang, req.domain, forced_terms
             )
         except MLServiceError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=str(exc),
-            ) from exc
+            # The reservation above already charged the quota for this
+            # attempt; refund it since the request didn't actually get a
+            # translation out of it.
+            await refund_api_key_quota(api_key, db)
+            # A 4xx from ml-service (unsupported language, ambiguous
+            # auto-detect text) is a problem with this request, not an
+            # outage — passing it through as 503 would tell the caller to
+            # retry a request that will fail identically every time.
+            status_code = (
+                exc.status_code
+                if exc.status_code is not None and 400 <= exc.status_code < 500
+                else status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+            raise HTTPException(status_code=status_code, detail=str(exc)) from exc
         cache.set(cache_key, result)
 
     record = Translation(
@@ -79,12 +103,20 @@ async def translate(
     response_model=schemas.BatchTranslateResponse,
     summary="Translate up to 50 texts in one call — real batched inference where possible.",
 )
+@limiter.limit("20/minute")
 async def translate_batch(
+    request: Request,
     req: schemas.BatchTranslateRequest,
     user=Depends(get_current_user_or_api_key),
+    api_key: Optional[APIKey] = Depends(get_api_key),
     db: AsyncSession = Depends(get_db),
     ml_client: MLServiceClient = Depends(get_ml_client),
 ):
+    # A batch of N items is metered as N quota units, not one — matching what
+    # a single-item /translate call would have cost had the caller sent N
+    # separate requests instead.
+    if not await consume_api_key_quota(api_key, db, amount=len(req.items)):
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="API key quota exceeded")
     try:
         batch_items = []
         for item in req.items:
@@ -102,10 +134,13 @@ async def translate_batch(
             )
         raw_results = await ml_client.translate_batch(batch_items)
     except MLServiceError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(exc),
-        ) from exc
+        await refund_api_key_quota(api_key, db, amount=len(req.items))
+        status_code = (
+            exc.status_code
+            if exc.status_code is not None and 400 <= exc.status_code < 500
+            else status.HTTP_503_SERVICE_UNAVAILABLE
+        )
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
     responses = []
     for item, result in zip(req.items, raw_results):

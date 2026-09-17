@@ -2,13 +2,14 @@ from typing import Optional
 
 from fastapi import Depends, Header, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from jose import jwt, JWTError
 from .database import AsyncSessionLocal
 from .core.config import settings
 from .models import APIKey, User
+from .security import hash_api_key
 
 ACCESS_TOKEN_COOKIE_NAME = "access_token"
 
@@ -43,6 +44,7 @@ async def _user_from_token(token: str, db: AsyncSession) -> Optional[User]:
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
         user_id = int(payload.get("sub"))
+        token_version = int(payload.get("tv", 0))
     except (JWTError, ValueError, TypeError):
         return None
     # selectinload(User.role): role.name is read synchronously downstream
@@ -52,7 +54,15 @@ async def _user_from_token(token: str, db: AsyncSession) -> Optional[User]:
     result = await db.execute(
         select(User).options(selectinload(User.role)).where(User.id == user_id)
     )
-    return result.scalar_one_or_none()
+    user = result.scalar_one_or_none()
+    if user is None:
+        return None
+    # A password reset bumps User.token_version (see auth.py:reset_password);
+    # a token minted before that reset carries the old version and must stop
+    # working immediately, not linger for the rest of its 7-day life.
+    if user.token_version != token_version:
+        return None
+    return user
 
 
 async def get_current_user(
@@ -93,14 +103,24 @@ def require_any_role(*role_names: str):
     return _checker
 
 
-async def _get_api_key(
+async def get_api_key(
     x_api_key: Optional[str] = Header(default=None),
     db: AsyncSession = Depends(get_db),
 ) -> Optional[APIKey]:
+    """Resolves (but does not charge) the X-API-Key header. Quota is charged
+    separately and atomically by consume_api_key_quota, right before the
+    metered work actually happens — see translate.py. This function only
+    rejects keys that are missing/invalid/inactive/already-exhausted; the
+    exhaustion check here is advisory (a fast-fail for the common case), the
+    real, race-safe enforcement is the conditional UPDATE in
+    consume_api_key_quota.
+    """
     if not x_api_key:
         return None
     result = await db.execute(
-        select(APIKey).options(selectinload(APIKey.user)).where(APIKey.key == x_api_key)
+        select(APIKey)
+        .options(selectinload(APIKey.user).selectinload(User.role))
+        .where(APIKey.hashed_key == hash_api_key(x_api_key))
     )
     key = result.scalar_one_or_none()
     if not key or not key.is_active:
@@ -110,19 +130,58 @@ async def _get_api_key(
     return key
 
 
+async def consume_api_key_quota(api_key: Optional[APIKey], db: AsyncSession, amount: int = 1) -> bool:
+    """Atomically reserves `amount` units of quota via a single conditional
+    UPDATE (not a separate check-then-write), so concurrent requests near the
+    limit can't all pass the check before any of them commits — the race
+    condition the old check-in-get_api_key/increment-in-the-caller split had.
+    Call this right before doing the metered work (the ml-service call), not
+    at auth time, so a cache hit (no ml-service call at all) never charges
+    quota; on a downstream failure, pair it with refund_api_key_quota.
+    No-op (returns True) for JWT/cookie sessions (api_key is None) — those
+    aren't quota-metered, only rate-limited.
+    """
+    if api_key is None:
+        return True
+    result = await db.execute(
+        update(APIKey)
+        .where(
+            APIKey.id == api_key.id,
+            (APIKey.quota_limit.is_(None)) | (APIKey.quota_used + amount <= APIKey.quota_limit),
+        )
+        .values(quota_used=APIKey.quota_used + amount)
+    )
+    await db.commit()
+    return result.rowcount > 0
+
+
+async def refund_api_key_quota(api_key: Optional[APIKey], db: AsyncSession, amount: int = 1) -> None:
+    """Undoes a consume_api_key_quota reservation after the metered work it
+    was reserved for turned out to fail (e.g. ml-service was unreachable) —
+    a failed request shouldn't permanently cost the caller quota it never
+    got a translation for.
+    """
+    if api_key is None:
+        return
+    await db.execute(
+        update(APIKey).where(APIKey.id == api_key.id).values(quota_used=APIKey.quota_used - amount)
+    )
+    await db.commit()
+
+
 async def get_current_user_or_api_key(
-    api_key: Optional[APIKey] = Depends(_get_api_key),
+    api_key: Optional[APIKey] = Depends(get_api_key),
     token: Optional[str] = Depends(get_token_from_request),
     db: AsyncSession = Depends(get_db),
 ) -> User:
     """Auth dependency for developer-facing endpoints: accepts an X-API-Key
-    header (metered against that key's quota), the browser's httpOnly cookie,
-    or a JWT bearer token.
+    header, the browser's httpOnly cookie, or a JWT bearer token. Callers
+    that need to meter usage should also depend on get_api_key directly
+    (FastAPI caches it per-request, so it isn't re-resolved) and call
+    consume_api_key_quota/refund_api_key_quota themselves around the actual
+    metered work.
     """
     if api_key is not None:
-        api_key.quota_used += 1
-        db.add(api_key)
-        await db.commit()
         return api_key.user
 
     credentials_exception = HTTPException(

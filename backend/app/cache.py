@@ -46,6 +46,15 @@ class CacheClient:
         except Exception as exc:
             logger.warning("Cache set failed, continuing without caching: %s", exc)
 
+    def ping(self) -> bool:
+        """Used by GET /status to report real Redis reachability, distinct
+        from get()/set() which always degrade silently to a no-op.
+        """
+        try:
+            return bool(self._client.ping())
+        except Exception:
+            return False
+
 
 def get_cache_client() -> CacheClient:
     return CacheClient(settings.redis_url, settings.cache_ttl_seconds)

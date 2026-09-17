@@ -1,0 +1,16 @@
+# Training-only dependencies — deliberately kept out of requirements.txt
+# (the serving path's dependencies), the same split-layer reasoning as
+# requirements-torch.txt: the serving container should never need to install
+# a training toolchain, and the training pipeline runs on a developer's
+# machine or a dedicated training job, not inside the always-on ml-service
+# container.
+-r requirements.txt
+
+peft==0.11.1
+accelerate==0.31.0
+datasets==2.20.0
+sacrebleu==2.4.2
+# peft's BOFT tuner imports torch.utils.cpp_extension at import time, which
+# needs setuptools — not guaranteed present in a bare venv on Python >=3.12
+# (venv stopped bundling it by default).
+setuptools

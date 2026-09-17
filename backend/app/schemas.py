@@ -46,7 +46,7 @@ class VerifyEmailRequest(BaseModel):
 
 class APIKeyRead(BaseModel):
     id: int
-    key: str
+    key_prefix: str
     is_active: bool
     quota_used: int
     quota_limit: Optional[int]
@@ -56,8 +56,9 @@ class APIKeyRead(BaseModel):
         from_attributes = True
 
 class APIKeyCreateResponse(BaseModel):
-    message: str = "API key created"
+    message: str = "API key created — copy it now, it will not be shown again"
     api_key: APIKeyRead
+    key: str
 
 class TranslateRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=5000)
@@ -354,3 +355,29 @@ ADMIN_ASSIGNABLE_ROLES = ("user", "translator", "admin")
 class AdminUserUpdate(BaseModel):
     role_name: Optional[str] = Field(None, pattern="^(" + "|".join(ADMIN_ASSIGNABLE_ROLES) + ")$")
     is_active: Optional[bool] = None
+
+class ContactMessageCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    email: EmailStr
+    subject: str = Field(..., min_length=1, max_length=255)
+    message: str = Field(..., min_length=1, max_length=5000)
+
+class ContactMessageRead(BaseModel):
+    id: int
+    name: str
+    email: EmailStr
+    subject: str
+    message: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class DependencyStatus(BaseModel):
+    status: str
+    detail: Optional[str] = None
+
+class SystemStatus(BaseModel):
+    status: str
+    checked_at: datetime
+    dependencies: dict[str, DependencyStatus]

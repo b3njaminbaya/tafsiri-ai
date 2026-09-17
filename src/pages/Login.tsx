@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
-import { api, API_BASE } from "@/lib/api";
+import { api, ApiError, API_BASE } from "@/lib/api";
 
 const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   invalid_state: "That login link expired or was tampered with. Please try again.",
@@ -16,6 +16,7 @@ const Login = () => {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [oauthProviders, setOauthProviders] = useState<{ google: boolean; github: boolean } | null>(
     null
@@ -46,19 +47,32 @@ const Login = () => {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (mode === "signup") {
+      if (password.length < 8) {
+        toast({ title: "Password too short", description: "Use at least 8 characters." });
+        return;
+      }
+      if (password !== confirmPassword) {
+        toast({ title: "Passwords don't match" });
+        return;
+      }
+    }
     setSubmitting(true);
     try {
       if (mode === "signup") {
         await register(email, password);
         toast({ title: "Account created", description: "You can now log in." });
         setMode("login");
+        setPassword("");
+        setConfirmPassword("");
         return;
       }
       await login(email, password);
       toast({ title: "Welcome", description: "Logged in successfully." });
       navigate(redirectTo, { replace: true });
     } catch (err) {
-      toast({ title: "Error", description: String(err) });
+      const description = err instanceof ApiError ? err.message : String(err);
+      toast({ title: "Error", description });
     } finally {
       setSubmitting(false);
     }
@@ -81,8 +95,28 @@ const Login = () => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <Input
+                id="password"
+                type="password"
+                minLength={mode === "signup" ? 8 : undefined}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
             </div>
+            {mode === "signup" && (
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm password</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  minLength={8}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
+              </div>
+            )}
             <Button type="submit" className="w-full" disabled={submitting}>
               {submitting ? "Please wait..." : mode === "login" ? "Log in" : "Sign up"}
             </Button>

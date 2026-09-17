@@ -1,9 +1,11 @@
+import { Link } from "react-router-dom";
+
 const GdprCompliance = () => {
   return (
     <div className="container mx-auto px-4 py-16">
       <div className="max-w-4xl mx-auto prose prose-slate dark:prose-invert">
         <h1 className="text-4xl font-bold tracking-tight mb-8">GDPR Compliance</h1>
-        <p className="text-muted-foreground mb-8">Last updated: January 18, 2025</p>
+        <p className="text-muted-foreground mb-8">Last updated: September 17, 2026</p>
 
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">1. Our Commitment to GDPR</h2>
@@ -82,68 +84,73 @@ const GdprCompliance = () => {
 
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">4. Data Protection Measures</h2>
-          <p className="mb-4">We implement comprehensive technical and organizational measures:</p>
+          <p className="mb-4">Measures actually in place today:</p>
 
-          <h3 className="text-xl font-semibold mb-2">Technical Measures</h3>
           <ul className="list-disc pl-6 mb-4">
-            <li>End-to-end encryption for data in transit and at rest</li>
-            <li>Regular security audits and penetration testing</li>
-            <li>Access controls and authentication mechanisms</li>
-            <li>Automated backup and disaster recovery systems</li>
+            <li>Traffic between your browser and the API is served over HTTPS/TLS</li>
+            <li>Passwords are hashed with bcrypt; API keys are hashed at rest and shown only once, at creation</li>
+            <li>Role-based access control (user, translator, admin) enforced server-side on every request</li>
+            <li>The web app authenticates via an httpOnly session cookie, not a token readable by JavaScript</li>
           </ul>
-
-          <h3 className="text-xl font-semibold mb-2">Organizational Measures</h3>
-          <ul className="list-disc pl-6 mb-4">
-            <li>Privacy by design principles in system development</li>
-            <li>Regular staff training on data protection</li>
-            <li>Data processing agreements with third parties</li>
-            <li>Privacy impact assessments for new features</li>
-          </ul>
+          <p className="mb-4">
+            We do not currently claim independently audited certifications (SOC 2, ISO 27001) or a
+            formal penetration-testing program — see the{" "}
+            <Link to="/security" className="text-primary underline">
+              Security page
+            </Link>{" "}
+            for the full, honest picture.
+          </p>
         </section>
 
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">5. International Data Transfers</h2>
-          <p className="mb-4">When transferring personal data outside the EEA, we ensure adequate protection through:</p>
-          <ul className="list-disc pl-6 mb-4">
-            <li>Standard Contractual Clauses (SCCs) approved by the European Commission</li>
-            <li>Adequacy decisions for transfers to approved countries</li>
-            <li>Binding Corporate Rules for intra-group transfers</li>
-            <li>Certification schemes and codes of conduct</li>
-          </ul>
+          <p className="mb-4">
+            If you are located outside the region where this service's infrastructure runs, using
+            it involves transferring your data internationally. We have not yet formalized Standard
+            Contractual Clauses or a Binding Corporate Rules program for these transfers. If this
+            matters for your use case, please{" "}
+            <Link to="/contact" className="text-primary underline">
+              contact us
+            </Link>{" "}
+            before relying on this platform for it.
+          </p>
         </section>
 
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">6. Data Retention</h2>
-          <p className="mb-4">We retain personal data only as long as necessary:</p>
-          <ul className="list-disc pl-6 mb-4">
-            <li>Account data: Retained while account is active plus 3 years</li>
-            <li>Translation data: Deleted after 30 days unless explicitly saved</li>
-            <li>Billing data: Retained for 7 years for tax and legal requirements</li>
-            <li>Support data: Retained for 5 years or until resolution</li>
-          </ul>
+          <p className="mb-4">
+            Account data and translation history are retained for as long as your account is
+            active, since your translation history is a core feature you can access at any time —
+            we do not delete translations after a fixed period. You can permanently anonymize your
+            account and revoke your API keys at any time from the{" "}
+            <Link to="/privacy-settings" className="text-primary underline">
+              Privacy Dashboard
+            </Link>
+            . Billing records, where applicable, are retained by our payment processor (Stripe)
+            under its own retention terms.
+          </p>
         </section>
 
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">7. Data Breach Notification</h2>
-          <p className="mb-4">In case of a personal data breach, we will:</p>
-          <ul className="list-disc pl-6 mb-4">
-            <li>Notify the relevant supervisory authority within 72 hours</li>
-            <li>Inform affected individuals without undue delay if high risk exists</li>
-            <li>Document all breaches and remediation actions</li>
-            <li>Conduct post-incident reviews to prevent future breaches</li>
-          </ul>
+          <p className="mb-4">
+            In the event of a personal data breach affecting your data, we will notify affected
+            users and the relevant supervisory authority as required by applicable law. We do not
+            currently operate a dedicated, staffed security incident-response team — see the{" "}
+            <Link to="/security" className="text-primary underline">
+              Security page
+            </Link>
+            .
+          </p>
         </section>
 
         <section className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">8. Data Protection Officer</h2>
-          <p className="mb-4">Our Data Protection Officer (DPO) is responsible for:</p>
-          <ul className="list-disc pl-6 mb-4">
-            <li>Monitoring GDPR compliance</li>
-            <li>Conducting privacy impact assessments</li>
-            <li>Serving as contact point for supervisory authorities</li>
-            <li>Providing data protection training and guidance</li>
-          </ul>
-          <p className="mb-4">Contact our DPO: dpo@nmtplatform.com</p>
+          <h2 className="text-2xl font-semibold mb-4">8. Data Protection Contact</h2>
+          <p className="mb-4">
+            We have not designated a formal Data Protection Officer. For any data protection
+            question or request, use the contact channel below — a real person reads and responds
+            to it.
+          </p>
         </section>
 
         <section className="mb-8">
@@ -151,19 +158,30 @@ const GdprCompliance = () => {
           <p className="mb-4">To exercise your GDPR rights:</p>
           <ul className="list-disc pl-6 mb-4">
             <li>Use the privacy controls in your account dashboard</li>
-            <li>Submit a request through our privacy request form</li>
-            <li>Email us at privacy@nmtplatform.com</li>
-            <li>Contact our Data Protection Officer directly</li>
+            <li>Submit a request through the GDPR request form linked below</li>
+            <li>
+              Or use the{" "}
+              <Link to="/contact" className="text-primary underline">
+                contact form
+              </Link>
+            </li>
           </ul>
-          <p className="mb-4">We will respond to your request within 30 days and may request identity verification for security purposes.</p>
-          
+          <p className="mb-4">
+            Access and portability requests are fulfilled immediately via the real data export in
+            your Privacy Dashboard. Other request types are logged and reviewed manually — see{" "}
+            <Link to="/gdpr-request" className="text-primary underline">
+              Submit GDPR Request
+            </Link>{" "}
+            below for what's automated versus what needs a human.
+          </p>
+
           <div className="mt-4">
-            <a 
-              href="/gdpr-request" 
+            <Link
+              to="/gdpr-request"
               className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
             >
               Submit GDPR Request
-            </a>
+            </Link>
           </div>
         </section>
 
@@ -180,13 +198,12 @@ const GdprCompliance = () => {
 
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">11. Contact Information</h2>
-          <p className="mb-4">For GDPR-related inquiries:</p>
-          <ul className="list-none mb-4">
-            <li>Data Protection Officer: dpo@nmtplatform.com</li>
-            <li>Privacy Team: privacy@nmtplatform.com</li>
-            <li>Address: 1234 Tech Street, San Francisco, CA 94105</li>
-            <li>EU Representative: [EU Representative Details]</li>
-          </ul>
+          <p className="mb-4">For GDPR-related inquiries, please use the{" "}
+            <Link to="/contact" className="text-primary underline">
+              contact form
+            </Link>
+            . We have not designated an EU representative under Article 27 at this time.
+          </p>
         </section>
       </div>
     </div>

@@ -12,11 +12,23 @@ from sqlalchemy.orm import selectinload
 from .... import schemas
 from ....core.config import settings
 from ....core.limiter import limiter
-from ....deps import ACCESS_TOKEN_COOKIE_NAME, get_current_active_user, get_db, require_role
+from ....deps import (
+    ACCESS_TOKEN_COOKIE_NAME,
+    _user_from_token,
+    get_current_active_user,
+    get_db,
+    get_token_from_request,
+)
 from ....email_client import EmailClient, get_email_client
 from ....models import APIKey, AuthToken, Role, User
 from ....oauth_client import OAuthClient, OAuthError, get_github_oauth_client, get_google_oauth_client
-from ....security import create_access_token, get_password_hash, normalize_email, verify_password
+from ....security import (
+    create_access_token,
+    get_password_hash,
+    hash_api_key,
+    normalize_email,
+    verify_password,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -141,13 +153,31 @@ async def login(
         or not verify_password(form_data.password, user.hashed_password)
     ):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")
-    token = create_access_token(subject=str(user.id))
+    token = create_access_token(subject=str(user.id), token_version=user.token_version)
     _set_auth_cookie(response, token)
     return schemas.Token(access_token=token)
 
 
-@router.post("/logout", summary="Clear the browser auth cookie")
-async def logout(response: Response):
+@router.post("/logout", summary="Clear the browser auth cookie and revoke outstanding tokens")
+async def logout(
+    response: Response,
+    token: Optional[str] = Depends(get_token_from_request),
+    db: AsyncSession = Depends(get_db),
+):
+    # Clearing the cookie alone only affects this browser; without also
+    # bumping token_version, a captured Bearer token (or another copy of the
+    # cookie) would keep working for the rest of its 7-day life after
+    # "logout". The tradeoff: this revokes every session for the user, not
+    # just the current one — an intentional "logout everywhere" choice for
+    # now, since there's no per-session token tracking to revoke selectively.
+    # Best-effort: an already-expired/invalid/missing token still gets a
+    # clean 200 (logout should never itself require a valid session), it
+    # just has nothing left to revoke.
+    if token:
+        user = await _user_from_token(token, db)
+        if user:
+            user.token_version += 1
+            await db.commit()
     response.delete_cookie(ACCESS_TOKEN_COOKIE_NAME, path="/")
     return {"message": "Logged out"}
 
@@ -269,7 +299,7 @@ async def _oauth_callback(
     except OAuthError:
         return RedirectResponse(f"{settings.frontend_base_url}/login?oauth_error=failed")
 
-    jwt_token = create_access_token(subject=str(user.id))
+    jwt_token = create_access_token(subject=str(user.id), token_version=user.token_version)
     redirect = RedirectResponse(f"{settings.frontend_base_url}/translate")
     redirect.delete_cookie(OAUTH_STATE_COOKIE_NAME, path="/api/v1/auth/oauth")
     _set_auth_cookie(redirect, jwt_token)
@@ -338,6 +368,11 @@ async def reset_password(body: schemas.ResetPasswordRequest, db: AsyncSession = 
     if not user:
         raise HTTPException(status_code=400, detail="Invalid or expired token")
     user.hashed_password = get_password_hash(body.new_password)
+    # Invalidates every JWT issued before this reset (deps._user_from_token
+    # checks this against the "tv" claim) — otherwise a token captured before
+    # the reset (the exact scenario a reset is meant to respond to) would
+    # keep working for the rest of its 7-day life.
+    user.token_version += 1
     await db.commit()
     return {"message": "Password updated"}
 
@@ -377,11 +412,28 @@ async def create_api_key(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
+    # Verified email required to mint API access: this is the one place email
+    # verification actually gates something (previously is_verified was
+    # tracked but enforced nowhere), and it's a meaningful abuse boundary —
+    # an unverified/disposable-email account can still use the product
+    # through the website, just not mint metered API credentials.
+    if not current_user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Verify your email before creating an API key",
+        )
     key_value = token_urlsafe(32)
-    api_key = APIKey(key=key_value, user_id=current_user.id, is_active=True)
+    api_key = APIKey(
+        hashed_key=hash_api_key(key_value),
+        key_prefix=key_value[:10],
+        user_id=current_user.id,
+        is_active=True,
+    )
     db.add(api_key)
     await db.commit()
-    return schemas.APIKeyCreateResponse(api_key=api_key)
+    # The raw key is returned here and only here — it isn't stored anywhere,
+    # so this is the caller's one chance to save it.
+    return schemas.APIKeyCreateResponse(api_key=api_key, key=key_value)
 
 
 @router.get("/api-keys", response_model=list[schemas.APIKeyRead], summary="List my API keys")
@@ -408,17 +460,3 @@ async def revoke_api_key(
     key.is_active = False
     await db.commit()
     return {"message": "API key revoked"}
-
-
-@router.post("/promote/{user_id}", summary="Promote a user to translator", dependencies=[Depends(require_role("admin"))])
-async def promote_user(user_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    translator_role = (
-        await db.execute(select(Role).where(Role.name == "translator"))
-    ).scalar_one_or_none()
-    user.role = translator_role
-    await db.commit()
-    return {"message": "User promoted"}

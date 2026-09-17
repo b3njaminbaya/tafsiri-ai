@@ -109,3 +109,16 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+DEFAULT_SECRET_KEY = "dev-secret-change-me"
+
+if settings.environment == "production" and settings.secret_key == DEFAULT_SECRET_KEY:
+    # A production deploy that never overrode SECRET_KEY would otherwise boot
+    # fine and silently sign every JWT with a value that's public in this
+    # repo's own source — forgeable auth. Fail loudly at import time rather
+    # than shipping that.
+    raise RuntimeError(
+        "SECRET_KEY is still the default development value. Set a real "
+        "SECRET_KEY (e.g. `python3 -c \"import secrets; print(secrets.token_urlsafe(48))\"`) "
+        "before running with ENVIRONMENT=production."
+    )

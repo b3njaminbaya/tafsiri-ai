@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -155,12 +156,12 @@ const GdprRequestForm = () => {
           <div className="mt-6 p-4 bg-muted rounded-lg">
             <h4 className="font-medium mb-2">Need Help?</h4>
             <p className="text-sm text-muted-foreground mb-2">
-              If you need assistance with your request, you can also contact us directly:
+              If you need assistance with your request, you can also{" "}
+              <Link to="/contact" className="text-primary underline">
+                contact us
+              </Link>
+              .
             </p>
-            <ul className="text-sm space-y-1">
-              <li>Data Protection Officer: dpo@nmtplatform.com</li>
-              <li>Privacy Team: privacy@nmtplatform.com</li>
-            </ul>
           </div>
         </CardContent>
       </Card>

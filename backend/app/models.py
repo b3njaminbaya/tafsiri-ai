@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float, ForeignKey, Index, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from .database import Base
@@ -22,6 +22,11 @@ class User(Base):
     hashed_password = Column(String(255), nullable=True)
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False, nullable=False)
+    # Bumped on password reset so JWTs issued before the reset stop
+    # validating (see security.create_access_token/deps._user_from_token) —
+    # otherwise a token captured before a reset (the exact scenario a reset
+    # is meant to respond to) would keep working for its full 7-day life.
+    token_version = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow)
 
     # Set together when an account was created (or linked) via OAuth; both
@@ -38,7 +43,17 @@ class User(Base):
 class APIKey(Base):
     __tablename__ = "api_keys"
     id = Column(Integer, primary_key=True, index=True)
-    key = Column(String(255), unique=True, index=True, nullable=False)
+    # SHA-256 of the raw key, not the raw key itself: the raw value is shown
+    # to the user exactly once (at creation) and never stored or re-displayed
+    # again, the same principle as a password. Unlike a password, no per-key
+    # salt is needed — the raw key is already a 32-byte random token the user
+    # never chose, so it isn't subject to dictionary/rainbow-table attacks the
+    # way a human-chosen password would be, and a fast deterministic hash is
+    # required anyway to look a key up by exact value on every request.
+    hashed_key = Column(String(64), unique=True, index=True, nullable=False)
+    # First few characters of the raw key, kept only so a user can tell their
+    # keys apart in a list without the full secret ever being stored/shown again.
+    key_prefix = Column(String(12), nullable=False)
     is_active = Column(Boolean, default=True)
     quota_used = Column(Integer, default=0)
     quota_limit = Column(Integer, nullable=True)
@@ -67,7 +82,7 @@ class Translation(Base):
 class Feedback(Base):
     __tablename__ = "feedback"
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     translation_id = Column(Integer, ForeignKey("translations.id"), nullable=False, index=True)
     rating = Column(Integer, nullable=False)
     comment = Column(Text, nullable=True)
@@ -99,7 +114,7 @@ class Correction(Base):
     __tablename__ = "corrections"
     id = Column(Integer, primary_key=True, index=True)
     translation_id = Column(Integer, ForeignKey("translations.id"), nullable=False, index=True)
-    reviewer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    reviewer_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     corrected_text = Column(Text, nullable=False)
     note = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
@@ -231,3 +246,25 @@ class GlossaryTerm(Base):
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
     created_by = relationship("User")
+
+    __table_args__ = (
+        # Every non-cached /translate call filters on all three of these
+        # (app/glossary.py:resolve_forced_terms) — domain alone (the old
+        # index) doesn't cover that query.
+        Index("ix_glossary_terms_lookup", "domain", "source_lang", "target_lang"),
+    )
+
+
+class ContactMessage(Base):
+    """A submission from the public Contact page. Also emailed to the
+    configured support address via EmailClient (logged instead, like every
+    other email, if SMTP isn't configured) so a real person sees it promptly,
+    while still being durably stored/queryable here.
+    """
+    __tablename__ = "contact_messages"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    email = Column(String(255), nullable=False, index=True)
+    subject = Column(String(255), nullable=False)
+    message = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)

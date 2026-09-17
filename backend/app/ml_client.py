@@ -5,6 +5,13 @@ import httpx
 from .core.config import settings
 
 
+def _error_detail(response: httpx.Response) -> str:
+    try:
+        return str(response.json().get("detail", response.text))
+    except ValueError:
+        return response.text
+
+
 class TranslateItem(TypedDict, total=False):
     text: str
     target_lang: str
@@ -14,7 +21,19 @@ class TranslateItem(TypedDict, total=False):
 
 
 class MLServiceError(Exception):
-    """Raised when ml-service is unreachable or returns an error."""
+    """Raised when ml-service is unreachable or returns an error.
+
+    status_code carries ml-service's own HTTP status when it responded at
+    all (e.g. 400 for an unsupported language or an auto-detect failure —
+    a client-input problem, not an outage), so callers can return that
+    instead of blanket-mapping every failure to 503. None means ml-service
+    never responded at all (network error, timeout) — that one really is a
+    503 "service unavailable".
+    """
+
+    def __init__(self, message: str, status_code: Optional[int] = None):
+        super().__init__(message)
+        self.status_code = status_code
 
 
 class MLServiceClient:
@@ -53,8 +72,7 @@ class MLServiceClient:
                 )
             resp.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            detail = exc.response.text
-            raise MLServiceError(f"ml-service returned {exc.response.status_code}: {detail}") from exc
+            raise MLServiceError(_error_detail(exc.response), status_code=exc.response.status_code) from exc
         except httpx.HTTPError as exc:
             raise MLServiceError(f"ml-service unreachable: {exc}") from exc
         return resp.json()
@@ -63,6 +81,15 @@ class MLServiceClient:
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 resp = await client.get(f"{self.base_url}/languages")
+            resp.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise MLServiceError(f"ml-service unreachable: {exc}") from exc
+        return resp.json()
+
+    async def get_languages_roadmap(self) -> dict:
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                resp = await client.get(f"{self.base_url}/languages/roadmap")
             resp.raise_for_status()
         except httpx.HTTPError as exc:
             raise MLServiceError(f"ml-service unreachable: {exc}") from exc
@@ -86,8 +113,7 @@ class MLServiceClient:
                 )
             resp.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            detail = exc.response.text
-            raise MLServiceError(f"ml-service returned {exc.response.status_code}: {detail}") from exc
+            raise MLServiceError(_error_detail(exc.response), status_code=exc.response.status_code) from exc
         except httpx.HTTPError as exc:
             raise MLServiceError(f"ml-service unreachable: {exc}") from exc
         return resp.json()["results"]

@@ -7,6 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -16,7 +25,13 @@ import {
 } from "@/components/ui/dialog";
 import { Search, Download, Globe, Loader2, Upload } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { api, ApiError, type DatasetRecord } from "@/lib/api";
+import {
+  api,
+  ApiError,
+  type DatasetRecord,
+  type RoadmapLanguage,
+  type SupportedLanguage,
+} from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 
 function formatSize(bytes: number): string {
@@ -46,6 +61,8 @@ const Datasets = () => {
     domain: "",
   });
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [supportedLanguages, setSupportedLanguages] = useState<SupportedLanguage[]>([]);
+  const [roadmapLanguages, setRoadmapLanguages] = useState<RoadmapLanguage[]>([]);
 
   const loadDatasets = async () => {
     try {
@@ -62,7 +79,24 @@ const Datasets = () => {
 
   useEffect(() => {
     loadDatasets();
+    api.getLanguages().then((res) => setSupportedLanguages(res.languages)).catch(() => setSupportedLanguages([]));
+    api
+      .getLanguagesRoadmap()
+      .then((res) => setRoadmapLanguages(res.languages))
+      .catch(() => setRoadmapLanguages([]));
   }, []);
+
+  // Datasets can be tagged with a roadmap language (one with no code isn't
+  // selectable — those are cluster languages like Mijikenda without a single
+  // standard code, see ml-service's KENYAN_LANGUAGES_ROADMAP) even though
+  // translation isn't live for it yet — this is how data collection for a
+  // not-yet-supported Kenyan language actually starts.
+  const languageNameByCode = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const lang of supportedLanguages) map.set(lang.code, lang.name);
+    for (const lang of roadmapLanguages) if (lang.code) map.set(lang.code, lang.name);
+    return map;
+  }, [supportedLanguages, roadmapLanguages]);
 
   const filteredDatasets = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -75,6 +109,10 @@ const Datasets = () => {
   }, [datasets, search]);
 
   const handleDownload = async (id: number) => {
+    if (!isAuthenticated) {
+      toast({ title: "Log in to download datasets" });
+      return;
+    }
     try {
       const { url } = await api.getDatasetDownloadUrl(id);
       window.open(url, "_blank", "noopener,noreferrer");
@@ -110,10 +148,13 @@ const Datasets = () => {
     <div className="container mx-auto px-4 py-16">
       <div className="text-center mb-16">
         <h1 className="text-4xl font-bold tracking-tight mb-4">
-          Translation Datasets
+          Kenyan Language Datasets
         </h1>
         <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-          Parallel corpora contributed by the community — uploaded and stored for training and evaluating translation models.
+          Parallel corpora contributed by the community. Swahili and Somali already have real
+          translation support — for every other Kenyan language on the roadmap, this is where
+          that support starts: real translation needs real parallel text, and that has to come
+          from people who actually speak these languages.
         </p>
       </div>
 
@@ -165,7 +206,9 @@ const Datasets = () => {
                     <br />
                     <span className="font-medium">
                       {dataset.source_lang && dataset.target_lang
-                        ? `${dataset.source_lang} → ${dataset.target_lang}`
+                        ? `${languageNameByCode.get(dataset.source_lang) ?? dataset.source_lang} → ${
+                            languageNameByCode.get(dataset.target_lang) ?? dataset.target_lang
+                          }`
                         : "Unspecified"}
                     </span>
                   </div>
@@ -179,9 +222,13 @@ const Datasets = () => {
                   <span className="text-sm text-muted-foreground">
                     {new Date(dataset.created_at).toLocaleDateString()}
                   </span>
-                  <Button size="sm" onClick={() => handleDownload(dataset.id)}>
+                  <Button
+                    size="sm"
+                    onClick={() => handleDownload(dataset.id)}
+                    title={isAuthenticated ? undefined : "Log in to download datasets"}
+                  >
                     <Download className="h-4 w-4" />
-                    Download
+                    {isAuthenticated ? "Download" : "Log in to download"}
                   </Button>
                 </div>
               </CardContent>
@@ -191,9 +238,11 @@ const Datasets = () => {
       )}
 
       <div className="bg-muted rounded-lg p-8 text-center">
-        <h2 className="text-2xl font-bold mb-4">Upload Your Own Dataset</h2>
+        <h2 className="text-2xl font-bold mb-4">Contribute a Dataset</h2>
         <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-          Contribute to the community by sharing your parallel corpora. Help improve translation quality for everyone.
+          Have parallel text for Kikuyu, Luo, Kalenjin, or another Kenyan language — even a small
+          amount? Upload it here. This is the data a future fine-tuning effort for that language
+          would actually be built from.
         </p>
         {isAuthenticated ? (
           <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
@@ -227,23 +276,75 @@ const Datasets = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="ds-source">Source language</Label>
-                    <Input
-                      id="ds-source"
-                      placeholder="en"
+                    <Select
                       value={uploadForm.source_lang}
-                      onChange={(e) => setUploadForm((p) => ({ ...p, source_lang: e.target.value }))}
-                    />
+                      onValueChange={(value) => setUploadForm((p) => ({ ...p, source_lang: value }))}
+                    >
+                      <SelectTrigger id="ds-source">
+                        <SelectValue placeholder="Select..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectLabel>Supported</SelectLabel>
+                          {supportedLanguages.map((lang) => (
+                            <SelectItem key={lang.code} value={lang.code}>
+                              {lang.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                        <SelectGroup>
+                          <SelectLabel>Kenyan — data collection only</SelectLabel>
+                          {roadmapLanguages
+                            .filter((lang) => lang.code)
+                            .map((lang) => (
+                              <SelectItem key={lang.code} value={lang.code as string}>
+                                {lang.name}
+                              </SelectItem>
+                            ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="ds-target">Target language</Label>
-                    <Input
-                      id="ds-target"
-                      placeholder="sw"
+                    <Select
                       value={uploadForm.target_lang}
-                      onChange={(e) => setUploadForm((p) => ({ ...p, target_lang: e.target.value }))}
-                    />
+                      onValueChange={(value) => setUploadForm((p) => ({ ...p, target_lang: value }))}
+                    >
+                      <SelectTrigger id="ds-target">
+                        <SelectValue placeholder="Select..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectLabel>Supported</SelectLabel>
+                          {supportedLanguages.map((lang) => (
+                            <SelectItem key={lang.code} value={lang.code}>
+                              {lang.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                        <SelectGroup>
+                          <SelectLabel>Kenyan — data collection only</SelectLabel>
+                          {roadmapLanguages
+                            .filter((lang) => lang.code)
+                            .map((lang) => (
+                              <SelectItem key={lang.code} value={lang.code as string}>
+                                {lang.name}
+                              </SelectItem>
+                            ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Contributing a parallel corpus for a language marked "data collection only" is
+                  exactly how that language moves toward real translation support — see the{" "}
+                  <Link to="/translate" className="underline">
+                    Translate page
+                  </Link>{" "}
+                  for the current roadmap.
+                </p>
                 <div className="space-y-2">
                   <Label htmlFor="ds-domain">Domain</Label>
                   <Input

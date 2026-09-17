@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -10,13 +11,42 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import { Languages, ArrowRight, Copy, Volume2, RotateCcw, Sparkles, Clock, CheckCircle, ThumbsUp, ThumbsDown } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, type RoadmapLanguage, type SupportedLanguage } from "@/lib/api";
+
+// Presentation-only flag lookup for languages the backend returns — not
+// sourced from the API, which has no reason to know about emoji.
+const FLAG_BY_CODE: Record<string, string> = {
+  sw: "🇰🇪",
+  so: "🇰🇪",
+  en: "🇺🇸",
+  es: "🇪🇸",
+  fr: "🇫🇷",
+  de: "🇩🇪",
+  it: "🇮🇹",
+  pt: "🇵🇹",
+  ru: "🇷🇺",
+  ja: "🇯🇵",
+  ko: "🇰🇷",
+  zh: "🇨🇳",
+  ar: "🇸🇦",
+  hi: "🇮🇳",
+  am: "🇪🇹",
+  ha: "🇳🇬",
+  ig: "🇳🇬",
+  yo: "🇳🇬",
+  zu: "🇿🇦",
+  xh: "🇿🇦",
+  ln: "🇨🇩",
+  wo: "🇸🇳",
+  ff: "🇸🇳",
+  lg: "🇺🇬",
+};
 
 const Translate = () => {
   const { isAuthenticated } = useAuth();
   const [text, setText] = useState("");
   const [sourceLanguage, setSourceLanguage] = useState("auto");
-  const [targetLanguage, setTargetLanguage] = useState("en");
+  const [targetLanguage, setTargetLanguage] = useState("sw");
   const [domain, setDomain] = useState<string | undefined>(undefined);
   const [output, setOutput] = useState<string>("");
   const [confidence, setConfidence] = useState<number | null>(null);
@@ -25,34 +55,44 @@ const Translate = () => {
   const [translationId, setTranslationId] = useState<number | null>(null);
   const [feedbackRating, setFeedbackRating] = useState<number | null>(null);
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
+  const [availableLanguages, setAvailableLanguages] = useState<SupportedLanguage[]>([]);
+  const [roadmapLanguages, setRoadmapLanguages] = useState<RoadmapLanguage[]>([]);
 
-  const commonLanguages = [
-    { code: "auto", name: "Auto-detect", flag: "🌐" },
-    { code: "en", name: "English", flag: "🇺🇸" },
-    { code: "es", name: "Spanish", flag: "🇪🇸" },
-    { code: "fr", name: "French", flag: "🇫🇷" },
-    { code: "de", name: "German", flag: "🇩🇪" },
-    { code: "it", name: "Italian", flag: "🇮🇹" },
-    { code: "pt", name: "Portuguese", flag: "🇵🇹" },
-    { code: "ru", name: "Russian", flag: "🇷🇺" },
-    { code: "ja", name: "Japanese", flag: "🇯🇵" },
-    { code: "ko", name: "Korean", flag: "🇰🇷" },
-    { code: "zh", name: "Chinese", flag: "🇨🇳" },
-    { code: "ar", name: "Arabic", flag: "🇸🇦" },
-    { code: "hi", name: "Hindi", flag: "🇮🇳" },
-    { code: "sw", name: "Swahili", flag: "🇹🇿" },
-    { code: "am", name: "Amharic", flag: "🇪🇹" },
-    { code: "ha", name: "Hausa", flag: "🇳🇬" },
-    { code: "ig", name: "Igbo", flag: "🇳🇬" },
-    { code: "yo", name: "Yoruba", flag: "🇳🇬" },
-    { code: "zu", name: "Zulu", flag: "🇿🇦" },
-    { code: "xh", name: "Xhosa", flag: "🇿🇦" },
-    { code: "so", name: "Somali", flag: "🇸🇴" },
-    { code: "ln", name: "Lingala", flag: "🇨🇩" },
-    { code: "wo", name: "Wolof", flag: "🇸🇳" },
-    { code: "ff", name: "Fulah", flag: "🇸🇳" },
-    { code: "lg", name: "Ganda", flag: "🇺🇬" },
-  ];
+  useEffect(() => {
+    api.getLanguages().then((res) => setAvailableLanguages(res.languages)).catch(() => setAvailableLanguages([]));
+    api
+      .getLanguagesRoadmap()
+      .then((res) => setRoadmapLanguages(res.languages))
+      .catch(() => setRoadmapLanguages([]));
+  }, []);
+
+  // Kenya is this product's primary focus — Kenyan languages (currently
+  // Swahili and Somali, the only two with real model support) are listed
+  // first, everything else after. See the "Kenyan languages" panel below
+  // for the languages not supported yet and why.
+  const commonLanguages = useMemo(() => {
+    const sorted = [...availableLanguages].sort((a, b) => Number(b.kenyan) - Number(a.kenyan));
+    return [
+      { code: "auto", name: "Auto-detect", flag: "🌐" },
+      ...sorted.map((lang) => ({
+        code: lang.code,
+        name: lang.kenyan ? `${lang.name} 🇰🇪` : lang.name,
+        flag: FLAG_BY_CODE[lang.code] ?? "🌐",
+      })),
+    ];
+  }, [availableLanguages]);
+
+  const speakOutput = () => {
+    if (!output) return;
+    if (!("speechSynthesis" in window)) {
+      toast({ title: "Text-to-speech isn't supported in this browser" });
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(output);
+    utterance.lang = targetLanguage;
+    window.speechSynthesis.speak(utterance);
+  };
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -86,11 +126,15 @@ const Translate = () => {
       toast({ title: "Please log in" });
       return;
     }
+    if (!text.trim()) {
+      toast({ title: "Enter some text to translate" });
+      return;
+    }
     try {
       setLoading(true);
       setFeedbackRating(null);
       const data = await api.translate({
-        text,
+        text: text.trim(),
         source_lang: sourceLanguage === "auto" ? undefined : sourceLanguage,
         target_lang: targetLanguage,
         domain,
@@ -134,7 +178,8 @@ const Translate = () => {
             </h1>
           </div>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Advanced AI-powered translation for low-resource languages with domain expertise and confidence scoring
+            Translation for Kenya's languages, starting with Swahili and Somali, with domain
+            expertise and confidence scoring.
           </p>
         </div>
 
@@ -332,6 +377,7 @@ const Translate = () => {
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={speakOutput}
                       disabled={!output}
                     >
                       <Volume2 className="w-4 h-4" />
@@ -372,7 +418,7 @@ const Translate = () => {
             <Button
               size="lg"
               onClick={runTranslate}
-              disabled={loading || !text}
+              disabled={loading || !text.trim()}
               className="px-12 py-6 text-lg font-semibold bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
             >
               {loading ? (
@@ -388,6 +434,33 @@ const Translate = () => {
               )}
             </Button>
           </div>
+
+          {roadmapLanguages.length > 0 && (
+            <Card className="mt-10">
+              <CardHeader>
+                <CardTitle className="text-base">Kenyan languages on the roadmap</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Swahili and Somali work today because they're the only Kenyan languages the
+                  underlying translation model was trained on. The languages below are real and
+                  planned, but not yet supported — selecting one would silently translate as the
+                  wrong language rather than fail, so they're not selectable yet.{" "}
+                  <Link to="/datasets" className="text-primary underline">
+                    Contribute parallel text
+                  </Link>{" "}
+                  to help get them there.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {roadmapLanguages.map((lang) => (
+                    <Badge key={lang.name} variant="outline">
+                      {lang.name}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

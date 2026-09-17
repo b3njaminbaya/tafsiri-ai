@@ -1,5 +1,4 @@
-from collections import Counter
-from typing import Sequence
+from typing import Optional
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
@@ -12,49 +11,67 @@ from ....models import Dataset, Feedback, Translation, User
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
 
-async def _summarize(db: AsyncSession, translations: Sequence[Translation]) -> schemas.AnalyticsSummary:
-    # Aggregated in Python rather than with DB-side date-truncation SQL: SQLite
-    # and Postgres don't share a portable CAST(... AS DATE)/date-trunc syntax
-    # via SQLAlchemy's generic layer, and at the scale this runs at (one
-    # user's history, or the whole platform's) this is simple, correct, and
-    # fast enough. Revisit with DB-side aggregation if translation volume
-    # grows large enough for this to matter.
-    total = len(translations)
-    average_confidence = (
-        sum(t.confidence for t in translations) / total if total else 0.0
-    )
+async def _summarize(db: AsyncSession, user_id: Optional[int]) -> schemas.AnalyticsSummary:
+    """Aggregated entirely in SQL (GROUP BY/COUNT/AVG), not by loading every
+    matching Translation row into Python — the old approach did `select(...)`
+    with no limit and iterated in memory, which for /analytics/global means
+    every translation ever made on the platform, on every request.
+    func.date(...) (not CAST(... AS DATE)) is used for the day bucket: it
+    renders as SQLite's and Postgres's own `date()` function on each backend
+    respectively, and — critically — is never asked to deserialize back into
+    a Python date via SQLAlchemy's generic DateTime type, which is what
+    caused the `TypeError: fromisoformat: argument must be str` this project
+    hit previously when this was written as a CAST. We just format the
+    already-stringy label directly, on both databases.
+    """
+    translation_filter = () if user_id is None else (Translation.user_id == user_id,)
 
-    daily_counts = Counter(t.created_at.date().isoformat() for t in translations)
-    translations_by_day = [
-        schemas.DailyCount(date=day, count=count) for day, count in sorted(daily_counts.items())
-    ]
-
-    pair_counts = Counter((t.source_lang, t.target_lang) for t in translations)
-    top_language_pairs = [
-        schemas.LanguagePairCount(source_lang=s, target_lang=t, count=c)
-        for (s, t), c in sorted(pair_counts.items(), key=lambda kv: kv[1], reverse=True)[:10]
-    ]
-
-    rating_counts: Counter = Counter()
-    translation_ids = [t.id for t in translations]
-    if translation_ids:
-        rating_rows = (
-            (
-                await db.execute(
-                    select(Feedback.rating).where(Feedback.translation_id.in_(translation_ids))
-                )
-            )
-            .scalars()
-            .all()
+    total, average_confidence = (
+        await db.execute(
+            select(
+                func.count(Translation.id),
+                func.coalesce(func.avg(Translation.confidence), 0.0),
+            ).where(*translation_filter)
         )
-        rating_counts = Counter(rating_rows)
-    feedback_breakdown = [
-        schemas.RatingBreakdown(rating=r, count=c) for r, c in sorted(rating_counts.items())
+    ).one()
+
+    day_expr = func.date(Translation.created_at)
+    daily_rows = (
+        await db.execute(
+            select(day_expr, func.count())
+            .where(*translation_filter)
+            .group_by(day_expr)
+            .order_by(day_expr)
+        )
+    ).all()
+    translations_by_day = [
+        schemas.DailyCount(date=str(day), count=count) for day, count in daily_rows if day is not None
     ]
+
+    pair_rows = (
+        await db.execute(
+            select(Translation.source_lang, Translation.target_lang, func.count().label("cnt"))
+            .where(*translation_filter)
+            .group_by(Translation.source_lang, Translation.target_lang)
+            .order_by(func.count().desc())
+            .limit(10)
+        )
+    ).all()
+    top_language_pairs = [
+        schemas.LanguagePairCount(source_lang=s, target_lang=t, count=c) for s, t, c in pair_rows
+    ]
+
+    feedback_query = select(Feedback.rating, func.count()).group_by(Feedback.rating)
+    if user_id is not None:
+        feedback_query = feedback_query.join(
+            Translation, Translation.id == Feedback.translation_id
+        ).where(Translation.user_id == user_id)
+    feedback_rows = (await db.execute(feedback_query.order_by(Feedback.rating))).all()
+    feedback_breakdown = [schemas.RatingBreakdown(rating=r, count=c) for r, c in feedback_rows]
 
     return schemas.AnalyticsSummary(
         total_translations=total,
-        average_confidence=average_confidence,
+        average_confidence=float(average_confidence),
         translations_by_day=translations_by_day,
         top_language_pairs=top_language_pairs,
         feedback_breakdown=feedback_breakdown,
@@ -70,12 +87,7 @@ async def analytics_summary(
     db: AsyncSession = Depends(get_db),
     user=Depends(get_current_active_user),
 ):
-    translations = (
-        (await db.execute(select(Translation).where(Translation.user_id == user.id)))
-        .scalars()
-        .all()
-    )
-    return await _summarize(db, translations)
+    return await _summarize(db, user.id)
 
 
 @router.get(
@@ -87,8 +99,7 @@ async def global_analytics_summary(
     db: AsyncSession = Depends(get_db),
     _admin=Depends(require_role("admin")),
 ):
-    translations = (await db.execute(select(Translation))).scalars().all()
-    summary = await _summarize(db, translations)
+    summary = await _summarize(db, None)
     total_users = (await db.execute(select(func.count(User.id)))).scalar_one()
     total_datasets = (await db.execute(select(func.count(Dataset.id)))).scalar_one()
     return schemas.GlobalAnalyticsSummary(

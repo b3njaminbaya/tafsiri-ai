@@ -16,6 +16,12 @@ RUN pip install --retries 10 --timeout 120 -r requirements-torch.txt
 COPY requirements.txt ./
 RUN pip install --retries 10 --timeout 120 -r requirements.txt
 
+# Deliberately not `training/` or requirements-training.txt — the training
+# pipeline (see training/README.md) is a separate, offline toolchain with
+# its own (much heavier) dependencies; it has no reason to ship in the
+# always-on serving image, and app/main.py's adapter loading only ever
+# imports peft when LANGUAGE_ADAPTERS is non-empty, so its absence here
+# doesn't affect serving at all until a language is actually promoted.
 COPY app ./app
 
 RUN useradd --create-home --shell /bin/bash appuser && \

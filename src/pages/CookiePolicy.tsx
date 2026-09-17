@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 const CookiePolicy = () => {
   return (
     <div className="container mx-auto px-4 py-16">
@@ -136,12 +138,13 @@ const CookiePolicy = () => {
 
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">8. Contact Us</h2>
-          <p className="mb-4">If you have questions about our use of cookies, please contact us:</p>
-          <ul className="list-none mb-4">
-            <li>Email: privacy@nmtplatform.com</li>
-            <li>Address: 1234 Tech Street, San Francisco, CA 94105</li>
-            <li>Phone: +1 (555) 123-4567</li>
-          </ul>
+          <p className="mb-4">
+            If you have questions about our use of cookies, please use the{" "}
+            <Link to="/contact" className="text-primary underline">
+              contact form
+            </Link>
+            .
+          </p>
         </section>
       </div>
     </div>

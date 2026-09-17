@@ -37,8 +37,24 @@ def _validate_dataset_filename(filename: str | None) -> None:
 
 
 @router.get("/", response_model=list[schemas.DatasetRead], summary="List available datasets")
-async def list_datasets(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Dataset).order_by(Dataset.id.desc()))
+async def list_datasets(
+    source_lang: str | None = None,
+    target_lang: str | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """Optional source_lang/target_lang filters — added for the training
+    pipeline's export step (training/export_dataset.py), which needs to pull
+    just the datasets for one language pair rather than every upload on the
+    platform. Exact match, case-sensitive by design: dataset language tags
+    are free text (see upload_dataset), so this doesn't attempt fuzzy
+    matching on top of untrusted input.
+    """
+    query = select(Dataset)
+    if source_lang:
+        query = query.where(Dataset.source_lang == source_lang)
+    if target_lang:
+        query = query.where(Dataset.target_lang == target_lang)
+    result = await db.execute(query.order_by(Dataset.id.desc()))
     return result.scalars().all()
 
 
@@ -69,6 +85,19 @@ async def upload_dataset(
     if not content:
         raise HTTPException(status_code=400, detail="Uploaded file is empty")
 
+    # Every allowed extension above is a text-based format — this catches an
+    # arbitrary binary (executable, archive, image) renamed to a matching
+    # extension, which the extension check alone can't. Not exhaustive
+    # format validation (this doesn't parse TSV/JSON/TMX structure), just a
+    # cheap, real content check the old extension-only gate didn't have.
+    try:
+        content.decode("utf-8")
+    except UnicodeDecodeError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Dataset file must be UTF-8 encoded text matching its extension",
+        )
+
     storage_key = f"{uuid4()}-{file.filename}"
     s3_client.put_object(
         Bucket=settings.minio_bucket_datasets,
@@ -94,12 +123,13 @@ async def upload_dataset(
 @router.get(
     "/{dataset_id}/download",
     response_model=schemas.DatasetDownloadResponse,
-    summary="Get a time-limited download URL for a dataset",
+    summary="Get a time-limited download URL for a dataset (requires login)",
 )
 async def download_dataset(
     dataset_id: int,
     db: AsyncSession = Depends(get_db),
     s3_public_client=Depends(get_s3_public_client),
+    _user=Depends(get_current_active_user),
 ):
     result = await db.execute(select(Dataset).where(Dataset.id == dataset_id))
     dataset = result.scalar_one_or_none()

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import GdprRequestForm from '@/components/GdprRequestForm';
 
 const GdprRequest = () => {
@@ -15,10 +16,10 @@ const GdprRequest = () => {
         
         <div className="mt-8 text-center text-sm text-muted-foreground">
           <p>
-            Need help? Contact our Data Protection Officer at{' '}
-            <a href="mailto:dpo@nmtplatform.com" className="text-primary hover:underline">
-              dpo@nmtplatform.com
-            </a>
+            Need help?{' '}
+            <Link to="/contact" className="text-primary hover:underline">
+              Contact us
+            </Link>
           </p>
         </div>
       </div>

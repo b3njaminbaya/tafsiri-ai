@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 const Accessibility = () => {
   return (
     <div className="container mx-auto px-4 py-16">
@@ -86,14 +88,13 @@ const Accessibility = () => {
 
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">Accessibility Testing</h2>
-          <p className="mb-4">We regularly test our platform for accessibility through:</p>
-          <ul className="list-disc pl-6 mb-4">
-            <li>Automated accessibility testing tools (axe, WAVE, Lighthouse)</li>
-            <li>Manual testing with keyboard navigation</li>
-            <li>Screen reader testing across multiple tools</li>
-            <li>User testing with people who have disabilities</li>
-            <li>Third-party accessibility audits</li>
-          </ul>
+          <p className="mb-4">
+            The interface is built on shadcn/ui components, which follow the underlying Radix UI
+            primitives' accessibility patterns (keyboard navigation, ARIA attributes, focus
+            management) by default. We do not yet run a dedicated automated accessibility test
+            suite or a formal third-party audit program — if you encounter a barrier, please report
+            it using the contact method below so we can fix it.
+          </p>
         </section>
 
         <section className="mb-8">
@@ -101,11 +102,13 @@ const Accessibility = () => {
           <p className="mb-4">If you encounter any accessibility barriers while using our platform, please let us know:</p>
           
           <h3 className="text-xl font-semibold mb-2">Contact Methods</h3>
-          <ul className="list-disc pl-6 mb-4">
-            <li>Email: accessibility@nmtplatform.com</li>
-            <li>Phone: +1 (555) 123-4567</li>
-            <li>Support form: Available in your account dashboard</li>
-          </ul>
+          <p className="mb-4">
+            Use the{" "}
+            <Link to="/contact" className="text-primary underline">
+              contact form
+            </Link>{" "}
+            to report an accessibility barrier.
+          </p>
 
           <h3 className="text-xl font-semibold mb-2">Information to Include</h3>
           <ul className="list-disc pl-6 mb-4">

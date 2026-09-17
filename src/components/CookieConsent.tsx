@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Cookie, Settings, X } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { api } from '@/lib/api';
 
 interface CookiePreferences {
   essential: boolean;
@@ -12,6 +14,7 @@ interface CookiePreferences {
 }
 
 const CookieConsent = () => {
+  const { isAuthenticated } = useAuth();
   const [showBanner, setShowBanner] = useState(false);
   const [showPreferences, setShowPreferences] = useState(false);
   const [preferences, setPreferences] = useState<CookiePreferences>({
@@ -31,6 +34,25 @@ const CookieConsent = () => {
     }
   }, []);
 
+  // The account-level Privacy Dashboard has its own analytics/functional/
+  // marketing switches backed by the same three concepts as this banner.
+  // Without this, accepting/rejecting cookies here never touched those
+  // account settings (and saving them there never touched this banner's
+  // localStorage) — a signed-in user could "Reject All" here while their
+  // account-level flags stayed on from before, with nothing reconciling the
+  // two. Best-effort and non-blocking: this banner must keep working even
+  // if the save fails or the user isn't logged in.
+  const syncToAccountIfLoggedIn = (prefs: CookiePreferences) => {
+    if (!isAuthenticated) return;
+    api
+      .updatePrivacySettings({
+        analytics: prefs.analytics,
+        functional: prefs.functional,
+        marketing: prefs.marketing,
+      })
+      .catch(() => undefined);
+  };
+
   const handleAcceptAll = () => {
     const allAccepted = {
       essential: true,
@@ -40,6 +62,7 @@ const CookieConsent = () => {
     };
     setPreferences(allAccepted);
     localStorage.setItem('cookie-consent', JSON.stringify(allAccepted));
+    syncToAccountIfLoggedIn(allAccepted);
     setShowBanner(false);
   };
 
@@ -52,6 +75,7 @@ const CookieConsent = () => {
     };
     setPreferences(essentialOnly);
     localStorage.setItem('cookie-consent', JSON.stringify(essentialOnly));
+    syncToAccountIfLoggedIn(essentialOnly);
     setShowBanner(false);
   };
 
@@ -61,6 +85,7 @@ const CookieConsent = () => {
 
   const handleSavePreferences = () => {
     localStorage.setItem('cookie-consent', JSON.stringify(preferences));
+    syncToAccountIfLoggedIn(preferences);
     setShowBanner(false);
     setShowPreferences(false);
   };

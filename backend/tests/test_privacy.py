@@ -1,4 +1,4 @@
-from .helpers import auth_headers, register_and_login
+from .helpers import auth_headers, register_and_login, register_login_and_verify
 
 
 def test_default_privacy_settings(client):
@@ -55,7 +55,7 @@ def test_export_includes_own_translations_and_not_other_users(client):
 
 
 def test_delete_account_anonymizes_and_deactivates(client):
-    token = register_and_login(client, "deleteme@example.com")
+    token = register_login_and_verify(client, "deleteme@example.com")
     headers = auth_headers(token)
     client.post("/api/v1/auth/api-keys", headers=headers)
 
@@ -76,10 +76,10 @@ def test_delete_account_anonymizes_and_deactivates(client):
 
 
 def test_delete_account_revokes_api_keys(client):
-    token = register_and_login(client, "deleteme2@example.com")
+    token = register_login_and_verify(client, "deleteme2@example.com")
     headers = auth_headers(token)
     created = client.post("/api/v1/auth/api-keys", headers=headers)
-    key_value = created.json()["api_key"]["key"]
+    key_value = created.json()["key"]
 
     client.post("/api/v1/privacy/delete-account", headers=headers)
 

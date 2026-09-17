@@ -1,10 +1,29 @@
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Code, Copy, Play } from "lucide-react";
+import { API_BASE } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
+
+// API_BASE already includes the /api/v1 prefix; the interactive Swagger UI
+// FastAPI generates for free lives at the backend root's /docs, not under
+// /api/v1 — this is a real, working "try it" console, unlike a fictional
+// in-house API explorer.
+const BACKEND_ROOT = API_BASE.replace(/\/api\/v1\/?$/, "");
+const SWAGGER_URL = `${BACKEND_ROOT}/docs`;
 
 const ApiDocs = () => {
+  const copyCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      toast({ title: "Copied to clipboard" });
+    } catch {
+      toast({ title: "Could not copy — select and copy manually" });
+    }
+  };
+
   const endpoints = [
     {
       method: "POST",
@@ -45,7 +64,7 @@ const ApiDocs = () => {
   ];
 
   const codeExamples = {
-    curl: `curl -X POST http://localhost:8000/api/v1/translate/ \\
+    curl: `curl -X POST ${API_BASE}/translate/ \\
   -H "X-API-Key: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -53,7 +72,7 @@ const ApiDocs = () => {
     "source_lang": "en",
     "target_lang": "es"
   }'`,
-    javascript: `const response = await fetch('http://localhost:8000/api/v1/translate/', {
+    javascript: `const response = await fetch('${API_BASE}/translate/', {
   method: 'POST',
   headers: {
     'X-API-Key': 'YOUR_API_KEY',
@@ -71,7 +90,7 @@ console.log(data.translation);`,
     python: `import requests
 
 response = requests.post(
-    'http://localhost:8000/api/v1/translate/',
+    '${API_BASE}/translate/',
     headers={
         'X-API-Key': 'YOUR_API_KEY',
         'Content-Type': 'application/json'
@@ -92,7 +111,7 @@ print(data['translation'])`
       <div className="text-center mb-16">
         <h1 className="text-4xl font-bold tracking-tight mb-4">API Documentation</h1>
         <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-          Integrate powerful neural machine translation into your applications with our RESTful API.
+          Integrate Kenya-first neural machine translation — Swahili and Somali today — into your applications with our RESTful API.
         </p>
       </div>
 
@@ -136,7 +155,13 @@ print(data['translation'])`
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <h4 className="font-semibold">1. Get your API key</h4>
-                <p className="text-sm text-muted-foreground">Sign up and generate your API key from the dashboard</p>
+                <p className="text-sm text-muted-foreground">
+                  Sign up, verify your email, then generate a key from the{" "}
+                  <Link to="/privacy-settings" className="text-primary underline">
+                    API Keys tab
+                  </Link>{" "}
+                  of your account.
+                </p>
               </div>
               <div className="space-y-2">
                 <h4 className="font-semibold">2. Make your first request</h4>
@@ -165,13 +190,15 @@ print(data['translation'])`
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="text-lg capitalize">{lang} Example</CardTitle>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => copyCode(code)}>
                       <Copy className="h-4 w-4" />
                       Copy
                     </Button>
-                    <Button variant="outline" size="sm">
-                      <Play className="h-4 w-4" />
-                      Try it
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={SWAGGER_URL} target="_blank" rel="noopener noreferrer">
+                        <Play className="h-4 w-4" />
+                        Try it
+                      </a>
                     </Button>
                   </div>
                 </CardHeader>

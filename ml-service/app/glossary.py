@@ -9,18 +9,13 @@ from typing import Dict, List, Optional, Tuple
 # than leaving translation quality to chance for terms that matter (a
 # medical/legal document translated with the wrong term for "prescription" or
 # "plaintiff" is a real, meaningful failure mode this addresses).
+#
+# Only (en, sw) entries below: this product is Kenya-only (see
+# app/main.py:SUPPORTED_LANGUAGES), so es/fr entries that existed here before
+# that scope change are unreachable — _validate_languages rejects es/fr
+# before a request ever reaches glossary lookup.
 GLOSSARY: Dict[str, Dict[Tuple[str, str], Dict[str, str]]] = {
     "medical": {
-        ("en", "es"): {
-            "prescription": "receta médica",
-            "diagnosis": "diagnóstico",
-            "dosage": "dosis",
-        },
-        ("en", "fr"): {
-            "prescription": "ordonnance",
-            "diagnosis": "diagnostic",
-            "dosage": "posologie",
-        },
         ("en", "sw"): {
             "prescription": "dawa iliyoagizwa",
             "diagnosis": "utambuzi",
@@ -28,16 +23,6 @@ GLOSSARY: Dict[str, Dict[Tuple[str, str], Dict[str, str]]] = {
         },
     },
     "legal": {
-        ("en", "es"): {
-            "plaintiff": "demandante",
-            "defendant": "demandado",
-            "affidavit": "declaración jurada",
-        },
-        ("en", "fr"): {
-            "plaintiff": "demandeur",
-            "defendant": "défendeur",
-            "affidavit": "déclaration sous serment",
-        },
         ("en", "sw"): {
             "plaintiff": "mlalamikaji",
             "defendant": "mshtakiwa",
@@ -45,16 +30,6 @@ GLOSSARY: Dict[str, Dict[Tuple[str, str], Dict[str, str]]] = {
         },
     },
     "technical": {
-        ("en", "es"): {
-            "firmware": "firmware",
-            "bandwidth": "ancho de banda",
-            "encryption": "cifrado",
-        },
-        ("en", "fr"): {
-            "firmware": "micrologiciel",
-            "bandwidth": "bande passante",
-            "encryption": "chiffrement",
-        },
         ("en", "sw"): {
             "firmware": "programu tegemezi",
             "bandwidth": "upana wa mawimbi",

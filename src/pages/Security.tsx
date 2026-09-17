@@ -1,62 +1,48 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Lock, Eye, Server, AlertTriangle, CheckCircle, Users, FileText } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Shield, Lock, Users, KeyRound, ShieldCheck, GitPullRequest, CheckCircle } from "lucide-react";
 
 const Security = () => {
   const securityFeatures = [
     {
       icon: <Lock className="h-6 w-6" />,
-      title: "End-to-End Encryption",
-      description: "All data is encrypted in transit using TLS 1.3 and at rest using AES-256 encryption",
-      status: "Active"
+      title: "Encryption in Transit",
+      description: "Traffic between your browser and the API is served over HTTPS/TLS.",
     },
     {
-      icon: <Shield className="h-6 w-6" />,
-      title: "SOC 2 Type II Compliance",
-      description: "Independently audited security controls meeting the highest industry standards",
-      status: "Certified"
+      icon: <KeyRound className="h-6 w-6" />,
+      title: "Password & API Key Hashing",
+      description: "Passwords are hashed with bcrypt; API keys are hashed at rest (SHA-256) and shown to you only once, at creation.",
     },
     {
-      icon: <Eye className="h-6 w-6" />,
-      title: "24/7 Security Monitoring",
-      description: "Continuous monitoring and threat detection with immediate incident response",
-      status: "Active"
-    },
-    {
-      icon: <Server className="h-6 w-6" />,
-      title: "Secure Infrastructure",
-      description: "Multi-region deployment with redundant security layers and DDoS protection",
-      status: "Active"
+      icon: <ShieldCheck className="h-6 w-6" />,
+      title: "httpOnly Session Cookies",
+      description: "The web app authenticates via an httpOnly cookie, which JavaScript cannot read — a stolen script can't exfiltrate your session token.",
     },
     {
       icon: <Users className="h-6 w-6" />,
-      title: "Access Controls",
-      description: "Role-based access control with multi-factor authentication and least privilege principles",
-      status: "Active"
+      title: "Role-Based Access Control",
+      description: "User, translator, and admin roles gate what each account can see and do, enforced on every request server-side.",
     },
     {
-      icon: <FileText className="h-6 w-6" />,
-      title: "Regular Audits",
-      description: "Quarterly security assessments and annual penetration testing by third parties",
-      status: "Current"
-    }
-  ];
-
-  const certifications = [
-    { name: "SOC 2 Type II", description: "Security, availability, and confidentiality", year: "2024" },
-    { name: "ISO 27001", description: "Information security management", year: "2024" },
-    { name: "GDPR Compliant", description: "European data protection regulation", year: "2024" },
-    { name: "HIPAA Ready", description: "Healthcare data protection standards", year: "2024" }
+      icon: <Shield className="h-6 w-6" />,
+      title: "Rate Limiting",
+      description: "Authentication and translation endpoints are rate-limited per caller to reduce abuse.",
+    },
+    {
+      icon: <GitPullRequest className="h-6 w-6" />,
+      title: "Open About Gaps",
+      description: "This page describes what's actually implemented today, not aspirational claims — see the note below.",
+    },
   ];
 
   return (
     <div className="container mx-auto px-4 py-16">
       <div className="text-center mb-16">
-        <h1 className="text-4xl font-bold tracking-tight mb-4">
-          Enterprise-Grade Security
-        </h1>
+        <h1 className="text-4xl font-bold tracking-tight mb-4">Security</h1>
         <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-          Your data security is our top priority. We implement industry-leading security measures to protect your translations and personal information.
+          An honest account of the security measures actually built into Tafsiri AI today.
         </p>
       </div>
 
@@ -64,14 +50,7 @@ const Security = () => {
         {securityFeatures.map((feature, index) => (
           <Card key={index}>
             <CardHeader>
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-primary">
-                  {feature.icon}
-                </div>
-                <Badge variant={feature.status === "Certified" ? "default" : "secondary"}>
-                  {feature.status}
-                </Badge>
-              </div>
+              <div className="text-primary mb-2">{feature.icon}</div>
               <CardTitle className="text-lg">{feature.title}</CardTitle>
             </CardHeader>
             <CardContent>
@@ -81,127 +60,66 @@ const Security = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
+      <div className="max-w-3xl mx-auto space-y-6 mb-16">
         <div>
-          <h2 className="text-3xl font-bold mb-6">Data Protection</h2>
-          <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
-              <div>
-                <h3 className="font-semibold">Zero-Knowledge Architecture</h3>
-                <p className="text-muted-foreground text-sm">We cannot access your translation data - it's encrypted with keys only you control.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
-              <div>
-                <h3 className="font-semibold">Data Residency Control</h3>
-                <p className="text-muted-foreground text-sm">Choose where your data is stored and processed to meet regulatory requirements.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
-              <div>
-                <h3 className="font-semibold">Automatic Data Deletion</h3>
-                <p className="text-muted-foreground text-sm">Translation data is automatically deleted after processing unless explicitly saved.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
-              <div>
-                <h3 className="font-semibold">Backup Encryption</h3>
-                <p className="text-muted-foreground text-sm">All backups are encrypted and stored in geographically distributed locations.</p>
-              </div>
-            </div>
-          </div>
+          <h2 className="text-2xl font-bold mb-4">Who can see your translations</h2>
+          <p className="text-muted-foreground">
+            Your translations are not end-to-end encrypted, and we do not claim a zero-knowledge
+            architecture. Translations you submit are stored so you can access your own history,
+            and low-confidence translations enter an active-learning review queue where accounts
+            with the translator or admin role can read them in order to submit corrections that
+            improve future translation quality. Admins can also manage user accounts and platform
+            content. There is no reviewer access to your account's authentication credentials
+            (passwords are hashed, API keys are hashed) — only to the translation content itself,
+            and only for the review workflow described here.
+          </p>
         </div>
 
         <div>
-          <h2 className="text-3xl font-bold mb-6">Infrastructure Security</h2>
-          <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
-              <div>
-                <h3 className="font-semibold">Multi-Layer Defense</h3>
-                <p className="text-muted-foreground text-sm">Web application firewalls, intrusion detection, and behavioral analysis.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
-              <div>
-                <h3 className="font-semibold">Container Security</h3>
-                <p className="text-muted-foreground text-sm">Kubernetes-based deployment with network policies and runtime security.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
-              <div>
-                <h3 className="font-semibold">Secrets Management</h3>
-                <p className="text-muted-foreground text-sm">Automated rotation of API keys, certificates, and access tokens.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
-              <div>
-                <h3 className="font-semibold">Vulnerability Management</h3>
-                <p className="text-muted-foreground text-sm">Continuous scanning and automated patching of security vulnerabilities.</p>
-              </div>
-            </div>
-          </div>
+          <h2 className="text-2xl font-bold mb-4">What we don't claim</h2>
+          <p className="text-muted-foreground">
+            Tafsiri AI does not currently hold SOC 2, ISO 27001, or HIPAA certifications, does not
+            run a dedicated 24/7 security team, and does not operate a bug bounty program. If any
+            of these matter for your use case, please{" "}
+            <Link to="/contact" className="text-primary underline">
+              get in touch
+            </Link>{" "}
+            before relying on this platform for that requirement.
+          </p>
         </div>
-      </div>
 
-      <div className="mb-16">
-        <h2 className="text-3xl font-bold text-center mb-8">Certifications & Compliance</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {certifications.map((cert, index) => (
-            <Card key={index} className="text-center">
-              <CardHeader>
-                <CardTitle className="text-lg">{cert.name}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-2">{cert.description}</p>
-                <Badge variant="outline">Updated {cert.year}</Badge>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-
-      <div className="bg-muted rounded-lg p-8 mb-16">
-        <div className="flex items-start gap-4">
-          <AlertTriangle className="h-6 w-6 text-orange-500 mt-1" />
-          <div>
-            <h3 className="text-xl font-semibold mb-2">Security Incident Response</h3>
-            <p className="text-muted-foreground mb-4">
-              We maintain a comprehensive incident response plan with clear escalation procedures. 
-              Our security team is available 24/7 to respond to potential security issues.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div>
-                <strong>Detection:</strong> Automated monitoring and alerting systems
-              </div>
-              <div>
-                <strong>Response:</strong> Immediate containment and investigation
-              </div>
-              <div>
-                <strong>Recovery:</strong> Service restoration and post-incident review
-              </div>
-            </div>
-          </div>
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Data rights</h2>
+          <p className="text-muted-foreground">
+            You can export everything your account touches, and delete your account (anonymizing
+            your personal data while preserving referential content like translations and dataset
+            uploads other parts of the platform depend on) from the{" "}
+            <Link to="/privacy-settings" className="text-primary underline">
+              Privacy Dashboard
+            </Link>
+            . See the{" "}
+            <Link to="/privacy-policy" className="text-primary underline">
+              Privacy Policy
+            </Link>{" "}
+            for the full picture.
+          </p>
         </div>
       </div>
 
       <div className="text-center">
-        <h2 className="text-3xl font-bold mb-4">Security Contact</h2>
+        <h2 className="text-3xl font-bold mb-4">Found a security issue?</h2>
         <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-          If you discover a security vulnerability or have security-related questions, 
-          please contact our security team immediately.
+          If you discover a security vulnerability, please let us know via the contact form rather
+          than filing a public issue.
         </p>
-        <div className="space-y-2">
-          <p><strong>Security Email:</strong> security@nmtplatform.com</p>
-          <p><strong>Bug Bounty Program:</strong> security.nmtplatform.com/bounty</p>
-          <p><strong>PGP Key:</strong> Available upon request</p>
+        <div className="flex items-center justify-center gap-2">
+          <CheckCircle className="h-4 w-4 text-primary" />
+          <Link to="/contact" className="text-primary underline font-medium">
+            Report it here
+          </Link>
+        </div>
+        <div className="mt-2">
+          <Badge variant="outline">No bug bounty program at this time</Badge>
         </div>
       </div>
     </div>

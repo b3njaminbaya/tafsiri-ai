@@ -19,7 +19,7 @@ const Footer = () => {
           <div className="space-y-4">
             <h3 className="font-semibold text-lg">Tafsiri AI</h3>
             <p className="text-sm text-muted-foreground">
-              Breaking language barriers with advanced neural machine translation for low-resource languages.
+              Neural machine translation for Kenya's languages, starting with Swahili and Somali.
             </p>
             <div className="flex space-x-3">
               <a 

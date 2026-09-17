@@ -1,23 +1,31 @@
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
-import { 
-  Globe, 
-  Brain, 
-  Users, 
-  BarChart3, 
-  Shield, 
-  Zap, 
-  CheckCircle, 
+import {
+  Globe,
+  Brain,
+  Users,
+  BarChart3,
+  Shield,
+  Zap,
+  CheckCircle,
   Star,
   ArrowRight,
   Languages,
   Database,
   Cpu
 } from "lucide-react";
+import { api, type CommunityStats } from "@/lib/api";
 
 const Index = () => {
+  const [stats, setStats] = useState<CommunityStats | null>(null);
+
+  useEffect(() => {
+    api.getCommunityStats().then(setStats).catch(() => setStats(null));
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
@@ -26,14 +34,15 @@ const Index = () => {
           <div className="text-center max-w-4xl mx-auto">
             <Badge className="mb-6" variant="secondary">
               <Star className="w-4 h-4 mr-2" />
-              Advanced Neural Machine Translation
+              Kenya-First Neural Machine Translation
             </Badge>
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
               Tafsiri AI
             </h1>
             <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-8 leading-relaxed">
-              Neural machine translation for low-resource languages, powered by transfer learning, few-shot
-              adaptation, and active learning. Bridge language barriers for underserved communities worldwide.
+              Neural machine translation for Kenya's languages — Swahili and Somali today, with
+              Kikuyu, Luo, Kalenjin, and more on the roadmap — backed by an active-learning review
+              queue that improves quality over time.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
               <Button size="lg" className="text-lg px-8 py-6" asChild>
@@ -46,23 +55,29 @@ const Index = () => {
               </Button>
             </div>
             
-            {/* Stats */}
+            {/* Stats — real platform activity, not marketing placeholders */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-2xl mx-auto">
               <div className="text-center">
-                <div className="text-2xl md:text-3xl font-bold text-primary">100+</div>
-                <div className="text-sm text-muted-foreground">Language Pairs</div>
+                <div className="text-2xl md:text-3xl font-bold text-primary">2 / 68</div>
+                <div className="text-sm text-muted-foreground">Kenyan languages supported so far</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl md:text-3xl font-bold text-primary">95%</div>
-                <div className="text-sm text-muted-foreground">Accuracy</div>
+                <div className="text-2xl md:text-3xl font-bold text-primary">
+                  {stats ? stats.total_translations.toLocaleString() : "—"}
+                </div>
+                <div className="text-sm text-muted-foreground">Translations served</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl md:text-3xl font-bold text-primary">10k+</div>
-                <div className="text-sm text-muted-foreground">Active Users</div>
+                <div className="text-2xl md:text-3xl font-bold text-primary">
+                  {stats ? stats.total_contributors.toLocaleString() : "—"}
+                </div>
+                <div className="text-sm text-muted-foreground">Contributors</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl md:text-3xl font-bold text-primary">24/7</div>
-                <div className="text-sm text-muted-foreground">Support</div>
+                <div className="text-2xl md:text-3xl font-bold text-primary">
+                  {stats ? stats.total_datasets.toLocaleString() : "—"}
+                </div>
+                <div className="text-sm text-muted-foreground">Datasets shared</div>
               </div>
             </div>
           </div>
@@ -93,15 +108,15 @@ const Index = () => {
                 <ul className="space-y-2">
                   <li className="flex items-center text-sm">
                     <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                    mBART & M2M base models
+                    Meta's M2M100 multilingual base model
                   </li>
                   <li className="flex items-center text-sm">
                     <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                    Zero-shot capabilities
+                    Many-to-many translation, no English pivot required
                   </li>
                   <li className="flex items-center text-sm">
                     <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                    Rapid deployment
+                    Automatic source language detection
                   </li>
                 </ul>
               </CardContent>
@@ -110,24 +125,24 @@ const Index = () => {
             <Card className="border-2 hover:border-primary/50 transition-colors">
               <CardHeader>
                 <Zap className="w-12 h-12 text-primary mb-4" />
-                <CardTitle>Few-Shot Learning</CardTitle>
+                <CardTitle>Domain Terminology</CardTitle>
                 <CardDescription>
-                  Achieve high accuracy with minimal training data
+                  Force the correct domain-specific term into translations, without a training pipeline
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
                   <li className="flex items-center text-sm">
                     <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                    Minimal data requirements
+                    Medical, legal, and technical glossaries
                   </li>
                   <li className="flex items-center text-sm">
                     <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                    Domain adaptation
+                    Constrained decoding guarantees the term appears
                   </li>
                   <li className="flex items-center text-sm">
                     <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                    Fast fine-tuning
+                    Admin-managed terminology
                   </li>
                 </ul>
               </CardContent>
@@ -153,7 +168,7 @@ const Index = () => {
                   </li>
                   <li className="flex items-center text-sm">
                     <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                    Auto-retraining
+                    Human review queue for low-confidence results
                   </li>
                 </ul>
               </CardContent>
@@ -171,11 +186,11 @@ const Index = () => {
                 <ul className="space-y-2">
                   <li className="flex items-center text-sm">
                     <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                    Auto cleaning & deduplication
+                    Format validation on upload
                   </li>
                   <li className="flex items-center text-sm">
                     <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                    Version control
+                    Time-limited secure download links
                   </li>
                   <li className="flex items-center text-sm">
                     <CheckCircle className="w-4 h-4 text-green-500 mr-2" />

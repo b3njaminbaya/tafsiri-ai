@@ -20,11 +20,14 @@ import {
   Globe,
   Loader2,
   User as UserIcon,
+  KeyRound,
+  Copy,
+  Ban,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { api, ApiError, type PrivacySettings } from '@/lib/api';
+import { api, ApiError, type ApiKey, type PrivacySettings } from '@/lib/api';
 
 const PrivacyDashboard = () => {
   const { toast } = useToast();
@@ -37,6 +40,11 @@ const PrivacyDashboard = () => {
   const [deleting, setDeleting] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
+  const [loadingKeys, setLoadingKeys] = useState(true);
+  const [creatingKey, setCreatingKey] = useState(false);
+  const [revokingId, setRevokingId] = useState<number | null>(null);
+  const [justCreatedKey, setJustCreatedKey] = useState<string | null>(null);
 
   useEffect(() => {
     setDisplayName(user?.display_name ?? '');
@@ -71,6 +79,72 @@ const PrivacyDashboard = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const loadApiKeys = () => {
+    setLoadingKeys(true);
+    api
+      .listApiKeys()
+      .then(setApiKeys)
+      .catch((err) => {
+        const description = err instanceof ApiError ? err.message : String(err);
+        toast({ title: 'Failed to load API keys', description, variant: 'destructive' });
+      })
+      .finally(() => setLoadingKeys(false));
+  };
+
+  useEffect(() => {
+    loadApiKeys();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleCreateApiKey = async () => {
+    setCreatingKey(true);
+    setJustCreatedKey(null);
+    try {
+      const created = await api.createApiKey();
+      setJustCreatedKey(created.key);
+      setApiKeys((prev) => [created.api_key, ...prev]);
+    } catch (error) {
+      toast({
+        title: "Couldn't create API key",
+        description: error instanceof ApiError ? error.message : String(error),
+        variant: 'destructive',
+      });
+    } finally {
+      setCreatingKey(false);
+    }
+  };
+
+  const handleRevokeApiKey = async (id: number) => {
+    setRevokingId(id);
+    try {
+      await api.revokeApiKey(id);
+      setApiKeys((prev) => prev.map((k) => (k.id === id ? { ...k, is_active: false } : k)));
+      toast({ title: 'API key revoked' });
+    } catch (error) {
+      toast({
+        title: "Couldn't revoke API key",
+        description: error instanceof ApiError ? error.message : String(error),
+        variant: 'destructive',
+      });
+    } finally {
+      setRevokingId(null);
+    }
+  };
+
+  const copyApiKey = async (key: string) => {
+    try {
+      await navigator.clipboard.writeText(key);
+      toast({ title: 'Copied to clipboard' });
+    } catch {
+      toast({ title: 'Could not copy — select and copy manually' });
+    }
+  };
+
+  // Keys this dashboard's "Cookies" tab shares with the CookieConsent
+  // banner's localStorage record — kept in sync in both directions so
+  // changing one doesn't silently leave the other stale in this browser.
+  const COOKIE_BANNER_KEYS: (keyof PrivacySettings)[] = ['analytics', 'functional', 'marketing'];
+
   const handleSettingChange = async (key: keyof PrivacySettings, value: boolean) => {
     if (!settings) return;
     const previous = settings;
@@ -79,6 +153,20 @@ const PrivacyDashboard = () => {
     try {
       const updated = await api.updatePrivacySettings({ [key]: value });
       setSettings(updated);
+      if (COOKIE_BANNER_KEYS.includes(key)) {
+        const existing = localStorage.getItem('cookie-consent');
+        const base = existing ? JSON.parse(existing) : {};
+        localStorage.setItem(
+          'cookie-consent',
+          JSON.stringify({
+            essential: true,
+            ...base,
+            analytics: updated.analytics,
+            functional: updated.functional,
+            marketing: updated.marketing,
+          })
+        );
+      }
     } catch (error) {
       setSettings(previous);
       toast({
@@ -99,7 +187,7 @@ const PrivacyDashboard = () => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `nmt-agent-data-export-${new Date().toISOString().slice(0, 10)}.json`;
+      link.download = `tafsiri-ai-data-export-${new Date().toISOString().slice(0, 10)}.json`;
       link.click();
       URL.revokeObjectURL(url);
       toast({
@@ -169,10 +257,14 @@ const PrivacyDashboard = () => {
       </div>
 
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <UserIcon className="h-4 w-4" />
             Profile
+          </TabsTrigger>
+          <TabsTrigger value="apikeys" className="flex items-center gap-2">
+            <KeyRound className="h-4 w-4" />
+            API Keys
           </TabsTrigger>
           <TabsTrigger value="privacy" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
@@ -219,6 +311,101 @@ const PrivacyDashboard = () => {
               <Button onClick={handleSaveProfile} disabled={savingProfile}>
                 {savingProfile ? 'Saving...' : 'Save profile'}
               </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* API Keys */}
+        <TabsContent value="apikeys" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <KeyRound className="h-5 w-5" />
+                API Keys
+              </CardTitle>
+              <CardDescription>
+                Use an API key with the <code>X-API-Key</code> header to call the translation API
+                directly — see the API Docs page for examples.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {user && !user.is_verified ? (
+                <Alert>
+                  <AlertDescription>
+                    Verify your email before creating an API key. You can request a new
+                    verification link from your account.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Button onClick={handleCreateApiKey} disabled={creatingKey}>
+                  {creatingKey ? 'Creating...' : 'Create new API key'}
+                </Button>
+              )}
+
+              {justCreatedKey && (
+                <Alert>
+                  <AlertDescription className="space-y-2">
+                    <p className="font-medium">
+                      Copy this key now — it will not be shown again.
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 break-all rounded bg-muted px-2 py-1 text-xs">
+                        {justCreatedKey}
+                      </code>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => copyApiKey(justCreatedKey)}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {loadingKeys ? (
+                <div className="flex items-center text-muted-foreground py-4">
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                  Loading your API keys...
+                </div>
+              ) : apiKeys.length === 0 ? (
+                <p className="text-sm text-muted-foreground">You haven't created any API keys yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {apiKeys.map((key) => (
+                    <div
+                      key={key.id}
+                      className="flex items-center justify-between gap-4 rounded-md border p-3"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <code className="text-sm font-mono">{key.key_prefix}••••••••</code>
+                          <Badge variant={key.is_active ? 'secondary' : 'outline'}>
+                            {key.is_active ? 'Active' : 'Revoked'}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {key.quota_used}
+                          {key.quota_limit != null ? ` / ${key.quota_limit}` : ''} requests used ·
+                          Created {new Date(key.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      {key.is_active && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleRevokeApiKey(key.id)}
+                          disabled={revokingId === key.id}
+                        >
+                          <Ban className="h-4 w-4 mr-1" />
+                          {revokingId === key.id ? 'Revoking...' : 'Revoke'}
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -8,6 +8,16 @@ from ....deps import get_db, require_role
 from ....models import Role, User
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+async def _active_admin_count(db: AsyncSession) -> int:
+    result = await db.execute(
+        select(func.count())
+        .select_from(User)
+        .join(Role, User.role_id == Role.id)
+        .where(Role.name == "admin", User.is_active.is_(True))
+    )
+    return result.scalar_one()
 
 
 @router.get(
@@ -45,6 +55,19 @@ async def update_user(
 
     if user.id == admin.id and body.is_active is False:
         raise HTTPException(status_code=400, detail="You cannot deactivate your own account")
+
+    is_self_demotion_from_admin = (
+        user.id == admin.id
+        and admin.role is not None
+        and admin.role.name == "admin"
+        and body.role_name is not None
+        and body.role_name != "admin"
+    )
+    if is_self_demotion_from_admin and await _active_admin_count(db) <= 1:
+        raise HTTPException(
+            status_code=400,
+            detail="You cannot demote yourself — you are the only remaining admin",
+        )
 
     if body.role_name is not None:
         role = (

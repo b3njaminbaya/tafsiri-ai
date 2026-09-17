@@ -4,9 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Loader2 } from "lucide-react";
 import { api, type BlogPost } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 const Blog = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -138,13 +140,13 @@ const Blog = () => {
         </div>
       )}
 
-      <p className="text-center text-xs text-muted-foreground mt-16">
-        Admin?{" "}
-        <Link to="/admin" className="underline hover:text-primary">
-          Manage posts in the admin panel
-        </Link>
-        .
-      </p>
+      {user?.role?.name === "admin" && (
+        <p className="text-center text-xs text-muted-foreground mt-16">
+          <Link to="/admin" className="underline hover:text-primary">
+            Manage posts in the admin panel
+          </Link>
+        </p>
+      )}
     </div>
   );
 };

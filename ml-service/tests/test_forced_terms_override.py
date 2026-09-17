@@ -8,7 +8,7 @@ def test_explicit_forced_terms_overrides_internal_glossary(client):
         json={
             "text": "hello world",
             "source_lang": "en",
-            "target_lang": "es",
+            "target_lang": "sw",
             "forced_terms": ["¡hola personalizada!"],
         },
     )
@@ -24,15 +24,15 @@ def test_explicit_empty_forced_terms_skips_internal_glossary(client):
         json={
             "text": "The doctor wrote a prescription.",
             "source_lang": "en",
-            "target_lang": "es",
+            "target_lang": "sw",
             "domain": "medical",
             "forced_terms": [],
         },
     )
     assert resp.status_code == 200
-    # Without this override, domain=medical would force "receta médica" via
-    # the internal glossary (see test_glossary.py) — an explicit empty list
-    # must suppress that, not fall back to it.
+    # Without this override, domain=medical would force "dawa iliyoagizwa"
+    # via the internal glossary (see test_glossary.py) — an explicit empty
+    # list must suppress that, not fall back to it.
     assert resp.json()["applied_glossary_terms"] == []
 
 
@@ -42,9 +42,9 @@ def test_omitted_forced_terms_still_uses_internal_glossary(client):
         json={
             "text": "The doctor wrote a prescription.",
             "source_lang": "en",
-            "target_lang": "es",
+            "target_lang": "sw",
             "domain": "medical",
         },
     )
     assert resp.status_code == 200
-    assert resp.json()["applied_glossary_terms"] == ["receta médica"]
+    assert resp.json()["applied_glossary_terms"] == ["dawa iliyoagizwa"]

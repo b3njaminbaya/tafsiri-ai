@@ -26,7 +26,11 @@ def _promote_to_translator(client, promote_actor_to_admin, email: str) -> tuple[
     admin_token = promote_actor_to_admin(f"admin_for_{email}")
     translator_token = register_and_login(client, email)
     me = client.get("/api/v1/auth/me", headers=auth_headers(translator_token)).json()
-    resp = client.post(f"/api/v1/auth/promote/{me['id']}", headers=auth_headers(admin_token))
+    resp = client.patch(
+        f"/api/v1/admin/users/{me['id']}",
+        json={"role_name": "translator"},
+        headers=auth_headers(admin_token),
+    )
     assert resp.status_code == 200
     return translator_token, me["id"]
 

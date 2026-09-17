@@ -174,8 +174,16 @@ const Community = () => {
               <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogTrigger asChild>
                   <Button
-                    onClick={() => {
+                    onClick={(e) => {
                       if (!isAuthenticated) {
+                        // Radix's DialogTrigger opens the dialog itself on
+                        // click (composed alongside this handler) even
+                        // though DialogContent below is only rendered
+                        // `{isAuthenticated && ...}` — without preventDefault
+                        // here, an unauthenticated click would still flash an
+                        // empty dialog overlay open for a frame before the
+                        // redirect below takes effect.
+                        e.preventDefault();
                         toast({ title: "Please log in to start a topic" });
                         navigate("/login");
                       }

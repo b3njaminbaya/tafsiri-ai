@@ -17,13 +17,24 @@ mapping layer.
 
 ## Endpoints
 
-- `GET /health` — `{"status": "ok", "model_name": ..., "model_loaded": bool}`. The
-  model is lazy-loaded on first `/translate` call, not at startup, so health
-  checks don't block on a multi-GB download.
-- `GET /languages` — the curated set of supported language codes/names. This
-  list deliberately includes low-resource languages (Swahili, Amharic, Hausa,
-  Igbo, Yoruba, Zulu, Xhosa, Somali, Lingala, Wolof, Fulah, Ganda) alongside
-  the common ones — that coverage is this product's actual differentiator.
+- `GET /health` — `{"status": "ok", "model_name": ..., "model_loaded": bool}`.
+  Liveness only, always 200 — the model is preloaded at startup via a FastAPI
+  lifespan handler, so this doesn't reflect load state on its own.
+- `GET /ready` — 503 until the model has actually finished loading; use this,
+  not `/health`, for a real readiness probe.
+- `GET /languages` — the supported language codes/names, each flagged
+  `"kenyan": true/false`. **This product is Kenya-only**: Swahili and
+  Somali (`kenyan: true`) plus English, kept as the one deliberate exception
+  — it's Kenya's other constitutional official language, and without it the
+  only working pair would be Swahili<->Somali directly, which almost no one
+  needs. Every other M2M100 language (Spanish, French, Amharic, Hausa, ...)
+  has been deliberately removed; this is not a general-purpose translator.
+- `GET /languages/roadmap` — real Kenyan languages (Kikuyu, Luo, Kalenjin,
+  Kamba, Kisii, Maasai, Luhya, Meru, Mijikenda, Turkana, and more) that are
+  **not** supported yet, because M2M100 has no pretrained coverage for them —
+  an honest "not yet" list rather than a silent gap. Supporting these for
+  real needs parallel-text data and fine-tuning (or a different base model),
+  not a code change.
 - `POST /translate` — `{text, source_lang?, target_lang, domain?}` →
   `{translation, source_lang, target_lang, confidence}`. If `source_lang` is
   omitted or `"auto"`, language is detected with `langdetect`. `confidence` is
@@ -53,3 +64,12 @@ plumbing is fully verified.
 
 In `docker-compose`, model weights persist across rebuilds in the
 `ml-model-cache` volume so they aren't re-downloaded on every `--build`.
+
+## Adding a Kenyan language
+
+See [`training/README.md`](training/README.md) for the full pipeline —
+pulling contributed parallel text from the Datasets page, cleaning it, LoRA
+fine-tuning M2M100 on a language it was never pretrained on, evaluating the
+result, and serving it. It's a separate offline toolchain
+(`requirements-training.txt`, not installed in the serving image) with real,
+tested mechanics — it just has no real Kenyan-language data to run on yet.

@@ -56,7 +56,17 @@ class FakeMLClient:
         ]
 
     async def get_languages(self) -> dict:
-        return {"languages": [{"code": "en", "name": "English"}, {"code": "es", "name": "Spanish"}]}
+        return {
+            "languages": [
+                {"code": "sw", "name": "Swahili", "kenyan": True},
+                {"code": "so", "name": "Somali", "kenyan": True},
+                {"code": "en", "name": "English", "kenyan": False},
+                {"code": "es", "name": "Spanish", "kenyan": False},
+            ]
+        }
+
+    async def get_languages_roadmap(self) -> dict:
+        return {"languages": [{"name": "Kikuyu (Gĩkũyũ)", "family": "Bantu"}]}
 
     async def get_health(self) -> dict:
         return {"status": "ok", "model_name": "fake-model", "model_loaded": True}
@@ -78,6 +88,9 @@ class FakeS3Client:
         bucket, key = Params["Bucket"], Params["Key"]
         return f"http://fake-s3.local/{bucket}/{key}?expires={ExpiresIn}"
 
+    def list_buckets(self) -> dict:
+        return {"Buckets": []}
+
 
 class FakeCacheClient:
     """In-memory stand-in for the Redis-backed CacheClient — same rationale
@@ -97,6 +110,9 @@ class FakeCacheClient:
 
     def set(self, key: str, value: dict) -> None:
         self.store[key] = value
+
+    def ping(self) -> bool:
+        return True
 
 
 class FakeStripeClient:

@@ -1,11 +1,28 @@
 # Tafsiri AI
 
 _Tafsiri_ is Swahili for "translation." A full-stack neural machine
-translation platform focused on low-resource African
-and Sub-Saharan languages (Swahili, Amharic, Hausa, Igbo, Yoruba, Zulu, Xhosa,
-Somali, Lingala, Wolof, Fulah, Ganda) alongside major world languages, with
-real persistence, a trained multilingual model, and the account/community/
-billing infrastructure a production product needs around it.
+translation platform that is **Kenya-only**: Swahili (the national/official
+language) and Somali (spoken in northeastern Kenya) are fully supported
+today, because they're the only two of Kenya's ~68 living languages with
+pretrained coverage in the underlying M2M100 model. English is kept as the
+one deliberate exception — it's Kenya's other constitutional official
+language, and the practical bridge for the real use case (Kenyan
+language↔English). Every other language M2M100 happens to support (Spanish,
+French, Amharic, ...) has been deliberately removed; this is not a
+general-purpose translator.
+
+Kikuyu, Luo, Kalenjin, Kamba, Kisii, Maasai, Luhya, Meru, Mijikenda,
+Turkana, and other Kenyan languages are an explicit, honestly-labeled
+roadmap (see `GET /languages/roadmap`) rather than something the app
+pretends to support. There's a real, tested, end-to-end pipeline for
+closing that gap — pulling contributed parallel text from the Datasets
+page, LoRA fine-tuning the model on a language it's never seen, evaluating
+the result, and serving it — see
+[`ml-service/training/README.md`](ml-service/training/README.md). What it
+doesn't have yet is real data: that starts with contributions through the
+Datasets page. The platform has real persistence, a trained multilingual
+model, and the account/community/billing infrastructure a production
+product needs around it.
 
 The project is organized as three cooperating services — a React frontend, a
 FastAPI backend, and a dedicated translation microservice — plus the Docker
@@ -14,8 +31,8 @@ MinIO.
 
 ## What it does
 
-Visitors can translate text between dozens of language pairs, with optional
-domain-specific terminology forcing (medical, legal, technical glossaries)
+Visitors can translate text between Swahili, Somali, and English, with
+optional domain-specific terminology forcing (medical, legal, technical glossaries)
 that guarantees a chosen term appears in the output regardless of general
 model quality. Every translation is persisted with a confidence score, so
 registered users get a real history and personal analytics, and low-confidence
@@ -142,9 +159,11 @@ docker compose up --build
 ```
 
 The backend becomes available at `http://localhost:8000` (interactive API
-docs at `/docs`), and the ML service at `http://localhost:8001`. The very
-first translation request triggers a one-time model download (roughly 1.6GB
-for M2M100), which is then cached in a Docker volume for all future restarts.
+docs at `/docs`), and the ML service at `http://localhost:8001`. The ML
+service downloads the model (roughly 1.6GB for M2M100) and loads it at
+startup, before it starts accepting requests — `GET /ready` on the ML
+service reports 503 until that finishes. The download is cached in a Docker
+volume, so only the first `docker compose up` pays for it.
 
 The frontend runs separately as a Vite dev server:
 

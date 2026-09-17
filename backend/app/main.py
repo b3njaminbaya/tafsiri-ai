@@ -18,6 +18,7 @@ from .api.v1.routes import auth as auth_routes
 from .api.v1.routes import billing as billing_routes
 from .api.v1.routes import blog as blog_routes
 from .api.v1.routes import community as community_routes
+from .api.v1.routes import contact as contact_routes
 from .api.v1.routes import datasets as datasets_routes
 from .api.v1.routes import forum as forum_routes
 from .api.v1.routes import glossary as glossary_routes
@@ -75,13 +76,17 @@ tags_metadata = [
         "name": "admin",
         "description": "User management: listing, role changes, activation/deactivation.",
     },
+    {
+        "name": "contact",
+        "description": "Public Contact page submissions.",
+    },
 ]
 
 app = FastAPI(
     title=settings.app_name,
     version="0.2.0",
     openapi_tags=tags_metadata,
-    description="API for Tafsiri AI — neural machine translation for low-resource languages.",
+    description="API for Tafsiri AI — neural machine translation for Kenya's languages, starting with Swahili and Somali.",
 )
 
 app.add_middleware(
@@ -114,4 +119,5 @@ api_router.include_router(glossary_routes.router)
 api_router.include_router(forum_routes.router)
 api_router.include_router(blog_routes.router)
 api_router.include_router(admin_routes.router)
+api_router.include_router(contact_routes.router)
 app.include_router(api_router)
