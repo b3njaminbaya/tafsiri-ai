@@ -28,4 +28,13 @@ EXPOSE 8000
 # overrides this same command for local dev, but without this default a
 # standalone deploy of this image would start serving traffic against an
 # unmigrated database.
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+# --forwarded-allow-ips='*': both Render and Cloud Run terminate TLS at a
+# proxy in front of this container and forward plain HTTP internally.
+# Without this, uvicorn's default --forwarded-allow-ips=127.0.0.1 doesn't
+# trust the proxy's X-Forwarded-Proto header (the proxy isn't 127.0.0.1),
+# so Starlette's automatic trailing-slash redirect builds its Location URL
+# from the scheme it actually saw — http — downgrading real HTTPS clients
+# to plaintext. Verified live against a real Cloud Run deploy. Safe to
+# trust unconditionally here since Cloud Run/Render's ingress is the only
+# thing that can reach this container directly.
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*'"]
