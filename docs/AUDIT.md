@@ -322,4 +322,157 @@ Found and fixed while walking through the running app end-to-end for the first t
 - **Admin panel** (`/admin`, new route, admin-only): three tabs — **Users** (list all accounts, change role, activate/deactivate — a user cannot deactivate their own account), **Glossary** (a real UI over the Batch-4 CRUD API that previously only existed via Swagger), **Blog** (create/edit/publish/delete posts). New `admin.py` route file: `GET /admin/users`, `PATCH /admin/users/{id}`. `ProtectedRoute` gained an `adminOnly` prop; `NavBar` shows an "Admin" link only for admin-role users.
 - 20 new backend tests (4 email-normalization, 8 blog, 8 admin-user-management) — full suite (146 tests) green throughout.
 - Verified live against the real running stack (not just a throwaway container): rebuilt and restarted the actual docker-compose `backend` service twice — migration `0011 → 0012` applied cleanly against the live database; confirmed both the case-sensitivity fix and its absence beforehand via direct reproduction (capitalized email 401'd before the fix, 200'd after); exercised `/admin/users`, blog post creation+publishing, and the public blog list end-to-end against the live server, then confirmed the pre-existing glossary endpoint was unaffected.
+
+---
+
+_Between Batch 6 and the entry below, the product scope was restricted to
+Kenyan languages only (Swahili, Somali, plus English as the one deliberate
+exception) and a full LoRA fine-tuning pipeline for adding new Kenyan
+languages was built (`ml-service/training/`). That work isn't logged here in
+phase-log detail — this file's entries resume with the production deployment
+below._
+
+## Production deployment (2026-09-17)
+
+Everything above had only ever been verified against local Postgres/Redis/
+MinIO via docker-compose, or a throwaway test database. This phase took the
+app onto real, live, free-tier infrastructure end to end — and, consistent
+with this project's whole verification philosophy, that live testing
+surfaced five more real bugs that no unit test had a reason to catch.
+
+### Data infrastructure: Neon, Upstash, Cloudflare R2
+
+Replaced local Postgres/Redis/MinIO with hosted equivalents chosen for
+having a genuinely free tier: [Neon](https://neon.tech) (serverless
+Postgres), [Upstash](https://upstash.com) (serverless Redis, TLS-only), and
+[Cloudflare R2](https://developers.cloudflare.com/r2/) (S3-compatible object
+storage, no egress fees). Two bugs surfaced wiring these in:
+
+- **asyncpg vs. `channel_binding`**: Neon's connection strings include
+  `channel_binding=require` by default. psycopg2 (the sync driver Alembic
+  uses) is built on libpq and understands it; asyncpg implements its own
+  wire protocol and doesn't — `connect() got an unexpected keyword argument
+  'channel_binding'`, reproduced directly against a real Neon database.
+  Fixed in `database.py`'s `to_async_url()`: strips the query string
+  entirely for the async engine, and expresses TLS intent separately via a
+  new `requires_ssl()` helper feeding `connect_args={"ssl": True}`.
+- **R2 token scoped to one bucket can't `ListBuckets`**: the `/status`
+  health check called `s3_client.list_buckets()` (account-wide) to verify
+  storage connectivity. A deliberately least-privilege R2 API token —
+  scoped to the one bucket this app actually uses, the correct production
+  setup — legitimately can't call that. Switched to `head_bucket(Bucket=
+  settings.minio_bucket_datasets)`, which matches the token's actual
+  permissions.
+
+Also added `MINIO_REGION` (`app/core/config.py`, `app/storage.py`): MinIO
+never validated the hardcoded `"us-east-1"`, but R2 documents `"auto"` as
+its real SigV4 region — verified live that R2 silently accepts both, but
+made it configurable rather than depending on that leniency indefinitely.
+
+### First backend host: Render — hit a real memory wall
+
+Render (free/Starter tier, both capped at 512MB RAM) was the first backend
+host tried. Live testing surfaced a third bug — a 1-second Redis
+`socket_connect_timeout`/`socket_timeout` was too tight for a cold TLS
+handshake to a remote host (Upstash), causing `/status` to spuriously report
+`cache: down` on the first request after a cold start (`cache.py`, bumped to
+5s) — but after fixing that and redeploying, the service settled into a
+genuine crash loop: healthy for ~90-120 seconds, then a clean restart with
+no application-level error (alembic re-running, a fresh `Started server
+process`, repeat). Render's dashboard confirmed a real `Instance failed`
+event, and free-tier plans hide memory/CPU metrics behind a paid upgrade, so
+there was no way to get an exact number — but the behavioral signature
+(healthy under load, then a silent kill with no exception, on a strict
+timer) is the standard signature of an OOM kill, and this backend's
+dependency set (async SQLAlchemy, boto3, Stripe SDK, cryptography/bcrypt,
+multiple OAuth clients, slowapi) is heavy enough that 512MB is plausibly
+just not enough. Render's paid Starter tier is **also** capped at 512MB
+(same ceiling, only more CPU); the next tier with more RAM runs ~$25/month —
+too much for what's meant to be an all-free-tier portfolio deployment.
+
+### Second backend host: Google Cloud Run — and two more real bugs
+
+Moved both the backend and ml-service to [Google Cloud
+Run](https://cloud.google.com/run) (Frankfurt region), which has a real free
+monthly quota (180,000 vCPU-seconds / 360,000 GiB-seconds / 2M requests) and
+scale-to-zero, comfortably covering portfolio-level traffic. Deleted the
+Render service and its `render.yaml` blueprint. Deploying here surfaced two
+more bugs:
+
+- **TLS downgrade on redirect**: hitting `POST /api/v1/translate` (missing
+  its trailing slash) returned a `307` redirect with `Location:
+  http://tafsiri-backend-.../api/v1/translate/` — `http`, not `https`. Both
+  Cloud Run and Render terminate TLS at a proxy in front of the container
+  and forward plain HTTP internally; uvicorn's default
+  `--forwarded-allow-ips=127.0.0.1` doesn't trust that proxy's
+  `X-Forwarded-Proto` header (the proxy isn't 127.0.0.1), so Starlette's
+  automatic trailing-slash redirect built its `Location` from the scheme it
+  actually saw. Fixed: `backend/Dockerfile`'s `CMD` now runs uvicorn with
+  `--proxy-headers --forwarded-allow-ips='*'`. Verified live: the redirect
+  now correctly reads `https://`.
+- **~55-58 second cold starts on ml-service**: Cloud Run's container
+  filesystem is ephemeral (same constraint Hugging Face Spaces documents),
+  so every scale-to-zero cold start was re-downloading the ~1.6GB M2M100
+  model from the Hub via `from_pretrained`. Enabling Cloud Run's
+  `--cpu-boost` didn't meaningfully help (still ~58s), which pointed at
+  network download, not CPU-bound model init, as the actual bottleneck —
+  confirmed by the app's own logs showing "Loading...loaded" completing in
+  1-2 seconds once weights are already local. Fixed by baking the model
+  into the image at Docker build time instead (`ml-service/Dockerfile`, new
+  `ARG MODEL_NAME` + `RUN python -c "...from_pretrained..."` step before the
+  serving code is even copied in).
+
+`backend/Dockerfile`'s `CMD` also now runs `alembic upgrade head` by
+default, not just via `docker-compose`'s command override — a standalone
+`docker run` of this image (which is what Cloud Run/Render actually execute)
+previously never migrated the database at all.
+
+### Frontend: Vercel, deployed last
+
+Deployed last, once the backend/ml-service URLs were known and stable, per
+explicit instruction. `vercel link` auto-detected the FastAPI `backend/`
+directory as a second deployable service and wrote a multi-service
+`vercel.json`, which would have tried to deploy a redundant second copy of
+the backend on Vercel — replaced with a plain single-service `vercel.json`
+(an SPA fallback rewrite to `index.html`, needed because the app uses
+`react-router-dom`'s `BrowserRouter`), and reset the Vercel project's
+framework preset from `services` back to `vite` via `vercel project update
+--framework vite` (the project-level "services" framework setting is stored
+server-side on Vercel and isn't reset just by changing `vercel.json`
+locally). `VITE_API_BASE_URL` set as a Vercel production environment
+variable pointing at the real Cloud Run backend URL. The actual assigned
+production domain (`tafsiri-ai-tan.vercel.app`) differed from the guessed
+placeholder used earlier while wiring up `CORS_ORIGINS`/`FRONTEND_BASE_URL`
+on the backend — corrected both once the real domain was known.
+
+### CI
+
+Two unrelated CI failures were fixed in the same window: `tailwind.config.ts`
+used a CommonJS `require()` in an ESM/TS file (`@typescript-eslint/
+no-require-imports`) — converted to a normal import; two shadcn boilerplate
+files (`command.tsx`, `textarea.tsx`) had empty interfaces just extending a
+supertype (`@typescript-eslint/no-empty-object-type`) — converted to type
+aliases. Separately, `tests/test_training_evaluate.py` and
+`tests/test_training_finetune.py` (added during the training-pipeline work)
+import `peft`/`sacrebleu` directly, which are deliberately excluded from
+`requirements-dev.txt` — they belong to `requirements-training.txt`,
+kept separate so the always-on serving image never needs the training
+toolchain — and CI's `ml-service` job only ever installed
+`requirements-dev.txt`, so those test modules failed to even collect. Fixed
+by having CI install both files.
+
+### Verification
+
+Confirmed via `GET /api/v1/status` against the real deployed backend that
+database/cache/storage/translation_model all report `operational` from a
+genuine cold start (not just a warm instance). Ran a full register → login →
+translate round trip against the live production URLs (not a staging
+proxy), and separately a dataset upload → list → presigned-download round
+trip against real Cloudflare R2, confirming the downloaded bytes matched
+exactly what was uploaded. Confirmed the deployed frontend's built JS bundle
+has the correct backend URL baked in, and that a real CORS preflight from
+the actual Vercel origin succeeds against the backend. All test users/
+datasets created during verification were deleted from the real production
+database/bucket afterward. Full backend suite (165 tests) and full
+ml-service suite (76 tests, training pipeline included) green throughout.
 - Caught mid-session that the docker-compose `backend` service has no source volume mount — code edits require an explicit `docker compose up --build backend` to take effect, they don't hot-reload like the separately-run frontend dev server does. Worth knowing for any future live debugging against this stack.

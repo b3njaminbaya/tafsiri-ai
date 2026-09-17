@@ -31,7 +31,7 @@ Key settings (see `app/core/config.py` for all of them):
 | `FRONTEND_BASE_URL` / `BACKEND_BASE_URL` | Used to build password-reset/verification links and OAuth redirect URIs. |
 | `ML_SERVICE_URL` | Where `ml-service` is reachable. |
 | `REDIS_URL` | Translation response cache. Optional in the sense that a Redis outage degrades to no caching, not a failure — but the app doesn't run without a reachable value configured. |
-| `MINIO_*` | Dataset object storage (see the two-endpoint split documented in `app/core/config.py` — internal vs. browser-facing). |
+| `MINIO_*` | Dataset object storage (see the two-endpoint split documented in `app/core/config.py` — internal vs. browser-facing). `MINIO_REGION` defaults to `us-east-1` for local MinIO; production sets it to `auto`, Cloudflare R2's documented region for SigV4 signing. |
 | `SMTP_*` | Password reset / verification email — see below. |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth login — see below. |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | GitHub OAuth login — see below. |
@@ -79,8 +79,21 @@ alembic revision -m "message"   # create a new empty migration
 
 Migrations run against the sync driver (`postgresql+psycopg2://...`) — this
 is deliberate; the app's runtime async engine is separate (see
-`database.py`'s `to_async_url`). The `docker-compose` backend service runs
-`alembic upgrade head` automatically before starting uvicorn.
+`database.py`'s `to_async_url`, which also strips the connection string's
+query params for the async driver — asyncpg doesn't understand
+`channel_binding`, which Neon includes by default; TLS intent is preserved
+separately via `connect_args`). `alembic upgrade head` runs automatically
+before uvicorn starts both in `docker-compose` (via its command override)
+and in `Dockerfile`'s own `CMD` — the latter matters because Cloud Run (and
+any other host building straight from the Dockerfile) uses that `CMD`
+directly, not docker-compose's.
+
+Production also runs uvicorn with `--proxy-headers
+--forwarded-allow-ips='*'`: both Cloud Run and Render terminate TLS in front
+of the container, and without trusting the proxy's `X-Forwarded-Proto`
+header, Starlette's automatic trailing-slash redirects build their
+`Location` URL from the scheme they see internally (`http`), downgrading
+real HTTPS clients.
 
 ## Billing (Stripe) — unverified against the real API
 

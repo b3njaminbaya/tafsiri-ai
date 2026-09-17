@@ -65,6 +65,16 @@ plumbing is fully verified.
 In `docker-compose`, model weights persist across rebuilds in the
 `ml-model-cache` volume so they aren't re-downloaded on every `--build`.
 
+The production `Dockerfile` takes a different approach: it downloads and
+bakes the model weights into the image itself at build time (see the `ARG
+MODEL_NAME` / `RUN python -c "...from_pretrained..."` step), rather than
+relying on a persistent volume. That's because the production host (Cloud
+Run) has an ephemeral container filesystem with no persistent disk — every
+scale-to-zero cold start would otherwise re-download the ~1.6GB model from
+the Hub, which pushed cold-start latency to ~55-58 seconds in practice, most
+of it network download rather than actual model init (which completes in
+1-2 seconds once the weights are already local).
+
 ## Adding a Kenyan language
 
 See [`training/README.md`](training/README.md) for the full pipeline —

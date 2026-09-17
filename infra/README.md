@@ -1,13 +1,16 @@
 # Tafsiri AI Infrastructure and Development
 
-This folder contains infrastructure configuration for local development and
-docker-compose-based deployment.
+This folder contains infrastructure configuration for **local development**.
+It is not what runs in production — the live deployment runs the backend and
+ml-service on Google Cloud Run, the frontend on Vercel, and uses Neon/
+Upstash/Cloudflare R2 in place of the Postgres/Redis/MinIO containers below.
+See the root [README.md](../README.md)'s "Deployment" section for that.
 
 Contents:
 - docker-compose.yml: Compose stack for Postgres, MinIO, FastAPI backend, and ML service.
 - .env.example: template for every optional backend value (secrets, SMTP, OAuth, Stripe). Copy to `.env` and fill in real values — `.env` is gitignored, `.env.example` is the committed template.
 
-## Setting real values (production / commercialization)
+## Setting real values (for testing integrations locally)
 
 1. `cp infra/.env.example infra/.env`
 2. Edit `infra/.env` — every variable there has a comment on what it does and where to get the real value (Stripe Dashboard, Google Cloud Console, GitHub OAuth Apps, your email provider, etc.). Everything is optional; leave a value blank to keep that feature gracefully disabled.

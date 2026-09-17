@@ -80,7 +80,9 @@ alongside ordinary API traffic.
 **Infrastructure** (`/infra`) — Docker Compose definitions for Postgres,
 Redis, MinIO, the backend, and the ML service, plus the `.env`-based
 configuration that lets every optional integration be enabled or left off
-independently. See `infra/README.md` for exact setup steps.
+independently. This is the **local development** stack; see "Deployment"
+below for what actually runs in production. See `infra/README.md` for exact
+setup steps.
 
 ## Features
 
@@ -179,6 +181,49 @@ See `backend/README.md` and `infra/README.md` for a deeper look at
 configuration, migrations, and what each optional integration requires to
 turn on.
 
+## Deployment
+
+The live deployment does **not** use Docker Compose — that's the local-dev
+stack described above. Production runs as five independently-hosted pieces,
+chosen to stay on free tiers end to end:
+
+| Service | Host | Why |
+|---|---|---|
+| Frontend | [Vercel](https://vercel.com) | Static Vite build, free Hobby plan |
+| Backend | [Google Cloud Run](https://cloud.google.com/run) (Frankfurt) | Scale-to-zero, genuinely free monthly quota (180,000 vCPU-seconds / 360,000 GiB-seconds / 2M requests) |
+| ML service | Google Cloud Run (Frankfurt) | Same as backend — needs real memory (~2GB+) for M2M100 + PyTorch, which ruled out Render's free/Starter tiers (512MB cap on both) |
+| Database | [Neon](https://neon.tech) | Serverless Postgres, scale-to-zero |
+| Cache | [Upstash](https://upstash.com) | Serverless Redis, TLS-only |
+| Object storage | [Cloudflare R2](https://developers.cloudflare.com/r2/) | S3-compatible, no egress fees |
+
+Both Cloud Run services build directly from their own `Dockerfile`
+(`backend/Dockerfile`, `ml-service/Dockerfile`) via `gcloud run deploy
+--source=...` — no separate CI/CD pipeline. A few things about those
+Dockerfiles only matter in this deployed context, not for local
+`docker compose` use:
+
+- `backend/Dockerfile`'s `CMD` runs `alembic upgrade head` before starting
+  uvicorn, and uvicorn itself runs with `--proxy-headers
+  --forwarded-allow-ips='*'` — both Cloud Run and Render terminate TLS in
+  front of the container and forward plain HTTP internally, so without
+  trusting `X-Forwarded-Proto` from that proxy, FastAPI's automatic
+  trailing-slash redirects built their `Location` header with `http://`,
+  silently downgrading real HTTPS clients.
+- `ml-service/Dockerfile` downloads and bakes the model weights into the
+  image at build time (`ARG MODEL_NAME`) rather than leaving `from_pretrained`
+  to fetch them from the Hub on first request. Cloud Run's container
+  filesystem is ephemeral — every scale-to-zero cold start was
+  re-downloading the ~1.6GB model, pushing cold-start latency to ~55-58
+  seconds, right at the edge of even a generous request timeout.
+
+Each of the three application services needs its own environment
+configuration wired in at its host (Cloud Run env vars, Vercel project
+environment variables) — see `backend/README.md`'s settings table and
+`ml-service/README.md` for what each one does. `VITE_API_BASE_URL` on the
+frontend and `CORS_ORIGINS`/`FRONTEND_BASE_URL` on the backend have to agree
+with each other's real deployed URLs, or the browser build will either call
+the wrong backend or get rejected by CORS.
+
 ## Project structure
 
 `src/` holds the entire frontend application — pages, components, the API
@@ -214,9 +259,11 @@ runnable the same way. The frontend is checked with `npm run lint` and
 `docs/AUDIT.md` is the authoritative source for architectural context,
 security and performance considerations, and a phase-by-phase log of what has
 been built and verified, including exactly how each feature was tested
-against real infrastructure. `backend/README.md` documents every backend
-configuration value and how each optional integration behaves when left
-unconfigured. `infra/README.md` covers the Docker Compose setup end to end.
+against real infrastructure — including the production deployment itself.
+`backend/README.md` documents every backend configuration value and how each
+optional integration behaves when left unconfigured. `infra/README.md`
+covers the Docker Compose **local development** setup end to end; see
+"Deployment" above for what actually runs in production.
 
 ## Contributing
 
