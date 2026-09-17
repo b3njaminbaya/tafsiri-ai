@@ -9,7 +9,7 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Company Info */}
           <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Tafsiri AI</h3>
+            <h3 className="font-semibold text-lg text-foreground">Tafsiri AI</h3>
             <p className="text-sm text-muted-foreground">
               Neural machine translation for Kenya's languages, starting with Swahili and Somali.
             </p>
@@ -49,7 +49,7 @@ const Footer = () => {
 
           {/* Product */}
           <div className="space-y-4">
-            <h4 className="font-semibold">Product</h4>
+            <h4 className="font-semibold text-foreground">Product</h4>
             <div className="space-y-2">
               <Link to="/translate" className="block text-sm text-muted-foreground hover:text-brand transition-colors">
                 Translator
@@ -71,7 +71,7 @@ const Footer = () => {
 
           {/* Resources */}
           <div className="space-y-4">
-            <h4 className="font-semibold">Resources</h4>
+            <h4 className="font-semibold text-foreground">Resources</h4>
             <div className="space-y-2">
               <Link to="/blog" className="block text-sm text-muted-foreground hover:text-brand transition-colors">
                 Blog
@@ -90,7 +90,7 @@ const Footer = () => {
 
           {/* Legal */}
           <div className="space-y-4">
-            <h4 className="font-semibold">Legal</h4>
+            <h4 className="font-semibold text-foreground">Legal</h4>
             <div className="space-y-2">
               <Link to="/privacy-policy" className="block text-sm text-muted-foreground hover:text-brand transition-colors">
                 Privacy Policy

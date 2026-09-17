@@ -32,7 +32,7 @@ const NavBar = () => {
     <header className="dark sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90">
       <div className="container flex items-center justify-between py-4">
         {/* Logo */}
-        <Link to="/" className="flex items-center space-x-2 font-semibold tracking-tight">
+        <Link to="/" className="flex items-center space-x-2 font-semibold tracking-tight text-foreground">
           <div className="flex items-center justify-center w-8 h-8 bg-primary rounded-lg">
             <Brain className="w-5 h-5 text-primary-foreground" />
           </div>

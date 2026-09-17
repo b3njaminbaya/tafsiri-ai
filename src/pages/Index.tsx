@@ -29,17 +29,17 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-primary/5 via-background to-secondary/5 pt-20 pb-16 md:pt-32 md:pb-24">
+      <section className="relative bg-background pt-20 pb-16 md:pt-32 md:pb-24">
         <div className="container">
           <div className="text-center max-w-4xl mx-auto">
             <Badge className="mb-6" variant="secondary">
               <Star className="w-4 h-4 mr-2" />
               Kenya-First Neural Machine Translation
             </Badge>
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 text-foreground">
               Tafsiri AI
             </h1>
-            <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-8 leading-relaxed">
+            <p className="text-xl md:text-2xl text-foreground max-w-3xl mx-auto mb-8 leading-relaxed">
               Neural machine translation for Kenya's languages — Swahili and Somali today, with
               Kikuyu, Luo, Kalenjin, and more on the roadmap — backed by an active-learning review
               queue that improves quality over time.
