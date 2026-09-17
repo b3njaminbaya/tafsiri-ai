@@ -20,8 +20,16 @@ class CacheClient:
 
     def __init__(self, redis_url: str, ttl_seconds: int):
         self.ttl_seconds = ttl_seconds
+        # socket_connect_timeout/socket_timeout=5s, not 1s: verified live
+        # against a real remote Redis (Upstash, TLS) that a 1s timeout
+        # spuriously fails the first connection after process startup — the
+        # TLS handshake to a remote host alone can exceed 1s, especially on a
+        # cold start (e.g. Render's free tier sleeping/waking). Caching stays
+        # an optimization (get/set/ping all degrade to a no-op on failure,
+        # per the class docstring), so this only affects how eagerly a slow
+        # network gets treated as "down".
         self._client = redis.Redis.from_url(
-            redis_url, decode_responses=True, socket_connect_timeout=1, socket_timeout=1
+            redis_url, decode_responses=True, socket_connect_timeout=5, socket_timeout=5
         )
 
     @staticmethod

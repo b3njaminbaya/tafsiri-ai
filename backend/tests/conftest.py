@@ -91,6 +91,9 @@ class FakeS3Client:
     def list_buckets(self) -> dict:
         return {"Buckets": []}
 
+    def head_bucket(self, Bucket: str) -> dict:
+        return {}
+
 
 class FakeCacheClient:
     """In-memory stand-in for the Redis-backed CacheClient — same rationale

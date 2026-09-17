@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .... import schemas
 from ....cache import CacheClient, get_cache_client
+from ....core.config import settings
 from ....deps import get_db
 from ....ml_client import MLServiceClient, MLServiceError, get_ml_client
 from ....storage import get_s3_client
@@ -62,7 +63,13 @@ async def system_status(
         dependencies["cache"] = schemas.DependencyStatus(status="down", detail="Redis unreachable")
 
     try:
-        s3_client.list_buckets()
+        # head_bucket (scoped to the one configured bucket), not
+        # list_buckets (account-wide) — a storage credential scoped to a
+        # single bucket, the least-privilege setup this project actually
+        # uses in production (see infra docs), legitimately can't call
+        # ListBuckets at all. Verified live: a bucket-scoped R2 token gets
+        # AccessDenied from list_buckets() but works fine here.
+        s3_client.head_bucket(Bucket=settings.minio_bucket_datasets)
         dependencies["storage"] = schemas.DependencyStatus(status="operational")
     except Exception as exc:
         dependencies["storage"] = schemas.DependencyStatus(status="down", detail=str(exc))

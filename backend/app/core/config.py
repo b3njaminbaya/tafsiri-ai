@@ -66,6 +66,12 @@ class Settings(BaseSettings):
     minio_access_key: str = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
     minio_secret_key: str = os.getenv("MINIO_SECRET_KEY", "minioadmin")
     minio_bucket_datasets: str = os.getenv("MINIO_BUCKET_DATASETS", "datasets")
+    # "us-east-1" (MinIO doesn't validate this) locally; Cloudflare R2 in
+    # production documents "auto" as its region for SigV4 signing — verified
+    # directly against a real R2 bucket that "us-east-1" is silently also
+    # accepted there, but "auto" is what R2 actually specifies, not an
+    # implementation detail to rely on staying lenient forever.
+    minio_region: str = os.getenv("MINIO_REGION", "us-east-1")
     max_dataset_upload_bytes: int = int(os.getenv("MAX_DATASET_UPLOAD_BYTES", str(50 * 1024 * 1024)))
 
     # Kept as a plain comma-separated string rather than List[str]: pydantic-

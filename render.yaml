@@ -1,0 +1,48 @@
+services:
+  - type: web
+    name: tafsiri-backend
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /api/v1/status
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: PORT
+        value: "8000"
+      - key: SECRET_KEY
+        generateValue: true
+      # Live credentials (Neon/Upstash/R2) — never committed to git; entered
+      # once in the Render dashboard when this blueprint is applied. See
+      # .env.local (gitignored, this repo's local staging copy of the same
+      # values) for what to paste.
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: MINIO_ACCESS_KEY
+        sync: false
+      - key: MINIO_SECRET_KEY
+        sync: false
+      - key: MINIO_ENDPOINT_URL
+        value: https://84d1d99240c91fa5a7cfcb9910e9629d.r2.cloudflarestorage.com
+      - key: MINIO_PUBLIC_URL
+        value: https://84d1d99240c91fa5a7cfcb9910e9629d.r2.cloudflarestorage.com
+      - key: MINIO_BUCKET_DATASETS
+        value: tafsiri-datasets
+      - key: MINIO_REGION
+        value: auto
+      - key: FIRST_ADMIN_EMAIL
+        value: b3njaminbaya@gmail.com
+      # Placeholders — updated once the ml-service (Hugging Face Spaces) and
+      # frontend (Vercel) are deployed later in this same rollout.
+      - key: ML_SERVICE_URL
+        sync: false
+      - key: FRONTEND_BASE_URL
+        sync: false
+      - key: BACKEND_BASE_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

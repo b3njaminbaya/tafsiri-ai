@@ -22,4 +22,10 @@ USER appuser
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Runs migrations before serving: this Dockerfile's CMD is what a plain
+# `docker run` (and Render, which builds from this Dockerfile directly, not
+# docker-compose) actually executes. infra/docker-compose.yml separately
+# overrides this same command for local dev, but without this default a
+# standalone deploy of this image would start serving traffic against an
+# unmigrated database.
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]

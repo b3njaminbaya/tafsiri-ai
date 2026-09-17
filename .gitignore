@@ -37,3 +37,4 @@ venv/
 
 # Claude Code local tool state — not project source
 .claude/
+.neon
