@@ -273,8 +273,8 @@ before submitting.
 
 ## License
 
-This project is licensed under the MIT License — see `LICENSE` for details.
+This project is licensed under the MIT License — see [LICENSE](LICENSE) for details.
 
 ## Contact
 
-**Project Lead:** Benjamin Mweri Baya — b3njaminbaya@gmail.com
+**Project Lead:** Benjamin Baya — b3njaminbaya@gmail.com

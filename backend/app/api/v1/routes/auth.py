@@ -40,12 +40,24 @@ VERIFY_TOKEN_TTL = timedelta(hours=24)
 
 
 def _set_auth_cookie(response: Response, token: str) -> None:
+    # samesite="none" in production (paired with secure=True, which
+    # SameSite=None requires — browsers reject the combination otherwise):
+    # the frontend (Vercel) and backend (Cloud Run) are on entirely
+    # different registrable domains, not just different subdomains, which
+    # makes every API call from the browser a cross-site request. A Lax
+    # cookie is only sent on top-level navigations, not on the fetch/XHR
+    # calls the SPA actually makes — verified live: login returned 200 and
+    # set the cookie, but the very next authenticated request came back as
+    # logged out because the browser withheld it. samesite="lax" is kept
+    # for local dev (secure=False there — plain http://localhost, where
+    # SameSite=None would be rejected outright, and Lax already works since
+    # different localhost ports count as same-site).
     response.set_cookie(
         key=ACCESS_TOKEN_COOKIE_NAME,
         value=token,
         httponly=True,
         secure=settings.access_token_cookie_secure,
-        samesite="lax",
+        samesite="none" if settings.access_token_cookie_secure else "lax",
         max_age=settings.access_token_expire_minutes * 60,
         path="/",
     )
