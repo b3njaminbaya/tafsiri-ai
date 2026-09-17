@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import PageContainer from "@/components/layout/PageContainer";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -133,7 +134,7 @@ const Community = () => {
     categories.find((c) => c.category === category)?.post_count ?? 0;
 
   return (
-    <div className="container mx-auto px-4 py-16">
+    <PageContainer>
       <div className="text-center mb-16">
         <h1 className="text-4xl font-bold tracking-tight mb-4">Community Forum</h1>
         <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
@@ -271,7 +272,7 @@ const Community = () => {
                           <AvatarFallback>{initials(post.author_handle)}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1">
-                          <h3 className="font-semibold hover:text-primary transition-colors mb-2">
+                          <h3 className="font-semibold hover:text-brand transition-colors mb-2">
                             {post.title}
                           </h3>
                           <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
@@ -371,7 +372,7 @@ const Community = () => {
           </Card>
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 };
 

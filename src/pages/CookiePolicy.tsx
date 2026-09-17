@@ -1,18 +1,33 @@
 import { Link } from "react-router-dom";
+import PageContainer from "@/components/layout/PageContainer";
+import LegalTableOfContents, { type TocEntry } from "@/components/legal/LegalTableOfContents";
+
+const sections: TocEntry[] = [
+  { id: "what-are-cookies", label: "1. What Are Cookies" },
+  { id: "types-of-cookies-we-use", label: "2. Types of Cookies We Use" },
+  { id: "third-party-cookies", label: "3. Third-Party Cookies" },
+  { id: "managing-your-cookie-preferences", label: "4. Managing Your Cookie Preferences" },
+  { id: "impact-of-disabling-cookies", label: "5. Impact of Disabling Cookies" },
+  { id: "cookie-retention-periods", label: "6. Cookie Retention Periods" },
+  { id: "updates-to-this-policy", label: "7. Updates to This Policy" },
+  { id: "contact-us", label: "8. Contact Us" },
+];
 
 const CookiePolicy = () => {
   return (
-    <div className="container mx-auto px-4 py-16">
-      <div className="max-w-4xl mx-auto prose prose-slate dark:prose-invert">
+    <PageContainer>
+      <div className="lg:flex lg:gap-12 lg:items-start max-w-5xl mx-auto">
+        <LegalTableOfContents entries={sections} className="lg:order-2" />
+        <div className="max-w-4xl mx-auto prose prose-slate dark:prose-invert">
         <h1 className="text-4xl font-bold tracking-tight mb-8">Cookie Policy</h1>
-        <p className="text-muted-foreground mb-8">Last updated: January 18, 2025</p>
+        <p className="text-muted-foreground mb-8">Last updated: September 18, 2026</p>
 
-        <section className="mb-8">
+        <section id="what-are-cookies" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">1. What Are Cookies</h2>
           <p className="mb-4">Cookies are small text files that are placed on your device when you visit our website. They help us provide you with a better experience by remembering your preferences and enabling certain features.</p>
         </section>
 
-        <section className="mb-8">
+        <section id="types-of-cookies-we-use" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">2. Types of Cookies We Use</h2>
           
           <h3 className="text-xl font-semibold mb-2">Essential Cookies</h3>
@@ -52,7 +67,7 @@ const CookiePolicy = () => {
           </ul>
         </section>
 
-        <section className="mb-8">
+        <section id="third-party-cookies" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">3. Third-Party Cookies</h2>
           <p className="mb-4">We use several third-party services that may place cookies on your device:</p>
           
@@ -77,7 +92,7 @@ const CookiePolicy = () => {
           </ul>
         </section>
 
-        <section className="mb-8">
+        <section id="managing-your-cookie-preferences" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">4. Managing Your Cookie Preferences</h2>
           <p className="mb-4">You can control and manage cookies in several ways:</p>
 
@@ -109,7 +124,7 @@ const CookiePolicy = () => {
           </ul>
         </section>
 
-        <section className="mb-8">
+        <section id="impact-of-disabling-cookies" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">5. Impact of Disabling Cookies</h2>
           <p className="mb-4">If you choose to disable cookies, some features may not work properly:</p>
           <ul className="list-disc pl-6 mb-4">
@@ -120,7 +135,7 @@ const CookiePolicy = () => {
           </ul>
         </section>
 
-        <section className="mb-8">
+        <section id="cookie-retention-periods" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">6. Cookie Retention Periods</h2>
           <p className="mb-4">Different cookies are stored for different periods:</p>
           <ul className="list-disc pl-6 mb-4">
@@ -131,23 +146,24 @@ const CookiePolicy = () => {
           </ul>
         </section>
 
-        <section className="mb-8">
+        <section id="updates-to-this-policy" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">7. Updates to This Policy</h2>
           <p className="mb-4">We may update this Cookie Policy from time to time to reflect changes in our practices or legal requirements. We will notify you of any material changes by posting the updated policy on our website.</p>
         </section>
 
-        <section className="mb-8">
+        <section id="contact-us" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">8. Contact Us</h2>
           <p className="mb-4">
             If you have questions about our use of cookies, please use the{" "}
-            <Link to="/contact" className="text-primary underline">
+            <Link to="/contact" className="text-brand underline underline-offset-4 hover:text-brand/80 transition-colors">
               contact form
             </Link>
             .
           </p>
         </section>
+        </div>
       </div>
-    </div>
+    </PageContainer>
   );
 };
 

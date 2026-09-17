@@ -1,4 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import PageContainer from "@/components/layout/PageContainer";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { Shield, Lock, Users, KeyRound, ShieldCheck, GitPullRequest, CheckCircle } from "lucide-react";
@@ -38,7 +39,7 @@ const Security = () => {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-16">
+    <PageContainer>
       <div className="text-center mb-16">
         <h1 className="text-4xl font-bold tracking-tight mb-4">Security</h1>
         <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
@@ -81,7 +82,7 @@ const Security = () => {
             Tafsiri AI does not currently hold SOC 2, ISO 27001, or HIPAA certifications, does not
             run a dedicated 24/7 security team, and does not operate a bug bounty program. If any
             of these matter for your use case, please{" "}
-            <Link to="/contact" className="text-primary underline">
+            <Link to="/contact" className="text-brand underline underline-offset-4 hover:text-brand/80 transition-colors">
               get in touch
             </Link>{" "}
             before relying on this platform for that requirement.
@@ -94,11 +95,11 @@ const Security = () => {
             You can export everything your account touches, and delete your account (anonymizing
             your personal data while preserving referential content like translations and dataset
             uploads other parts of the platform depend on) from the{" "}
-            <Link to="/privacy-settings" className="text-primary underline">
+            <Link to="/privacy-settings" className="text-brand underline underline-offset-4 hover:text-brand/80 transition-colors">
               Privacy Dashboard
             </Link>
             . See the{" "}
-            <Link to="/privacy-policy" className="text-primary underline">
+            <Link to="/privacy-policy" className="text-brand underline underline-offset-4 hover:text-brand/80 transition-colors">
               Privacy Policy
             </Link>{" "}
             for the full picture.
@@ -114,7 +115,7 @@ const Security = () => {
         </p>
         <div className="flex items-center justify-center gap-2">
           <CheckCircle className="h-4 w-4 text-primary" />
-          <Link to="/contact" className="text-primary underline font-medium">
+          <Link to="/contact" className="text-brand underline underline-offset-4 hover:text-brand/80 transition-colors font-medium">
             Report it here
           </Link>
         </div>
@@ -122,7 +123,7 @@ const Security = () => {
           <Badge variant="outline">No bug bounty program at this time</Badge>
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 };
 

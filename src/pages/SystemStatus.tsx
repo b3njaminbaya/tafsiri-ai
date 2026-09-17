@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import PageContainer from "@/components/layout/PageContainer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -59,7 +60,7 @@ const SystemStatus = () => {
   }, [load]);
 
   return (
-    <div className="container mx-auto px-4 py-16">
+    <PageContainer>
       <div className="text-center mb-16">
         <h1 className="text-4xl font-bold tracking-tight mb-4">System Status</h1>
         {loading ? (
@@ -127,7 +128,7 @@ const SystemStatus = () => {
           </div>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 };
 

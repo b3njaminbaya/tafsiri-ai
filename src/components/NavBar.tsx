@@ -30,7 +30,7 @@ const NavBar = () => {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex items-center justify-between py-4 px-4">
+      <div className="container flex items-center justify-between py-4">
         {/* Logo */}
         <Link to="/" className="flex items-center space-x-2 font-semibold tracking-tight">
           <div className="flex items-center justify-center w-8 h-8 bg-primary rounded-lg">
@@ -95,7 +95,7 @@ const NavBar = () => {
                   <Link
                     key={item.name}
                     to={item.href}
-                    className="text-foreground hover:text-primary transition-colors"
+                    className="text-foreground hover:text-brand transition-colors"
                     onClick={() => setIsOpen(false)}
                   >
                     {item.name}

@@ -1,10 +1,11 @@
 import PrivacyDashboard from '@/components/PrivacyDashboard';
+import PageContainer from "@/components/layout/PageContainer";
 
 const PrivacySettings = () => {
   return (
-    <div className="container mx-auto px-4 py-16">
+    <PageContainer>
       <PrivacyDashboard />
-    </div>
+    </PageContainer>
   );
 };
 

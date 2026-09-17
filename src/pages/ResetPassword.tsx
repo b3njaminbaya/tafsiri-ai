@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, ApiError } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
+import PageContainer from "@/components/layout/PageContainer";
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
@@ -34,7 +35,7 @@ const ResetPassword = () => {
 
   return (
     <div className="min-h-[calc(100vh-140px)] bg-background flex items-center justify-center">
-      <div className="container mx-auto max-w-md py-12">
+      <PageContainer className="max-w-md py-12">
         <h1 className="text-3xl font-bold mb-2">Set a new password</h1>
         <p className="text-muted-foreground mb-6">Choose a new password for your account.</p>
         <div className="rounded-lg border p-6">
@@ -65,7 +66,7 @@ const ResetPassword = () => {
             </form>
           )}
         </div>
-      </div>
+      </PageContainer>
     </div>
   );
 };

@@ -157,7 +157,7 @@ const GdprRequestForm = () => {
             <h4 className="font-medium mb-2">Need Help?</h4>
             <p className="text-sm text-muted-foreground mb-2">
               If you need assistance with your request, you can also{" "}
-              <Link to="/contact" className="text-primary underline">
+              <Link to="/contact" className="text-brand underline underline-offset-4 hover:text-brand/80 transition-colors">
                 contact us
               </Link>
               .

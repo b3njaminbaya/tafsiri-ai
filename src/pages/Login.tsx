@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { api, ApiError, API_BASE } from "@/lib/api";
+import PageContainer from "@/components/layout/PageContainer";
 
 const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   invalid_state: "That login link expired or was tampered with. Please try again.",
@@ -84,7 +85,7 @@ const Login = () => {
 
   return (
     <div className="min-h-[calc(100vh-140px)] bg-background flex items-center justify-center">
-      <div className="container mx-auto max-w-md py-12">
+      <PageContainer className="max-w-md py-12">
         <h1 className="text-3xl font-bold mb-2">{mode === "login" ? "Log in" : "Create an account"}</h1>
         <p className="text-muted-foreground mb-6">Access the Tafsiri AI platform.</p>
         <div className="rounded-lg border p-6">
@@ -154,7 +155,7 @@ const Login = () => {
             </div>
           </div>
         </div>
-      </div>
+      </PageContainer>
     </div>
   );
 };

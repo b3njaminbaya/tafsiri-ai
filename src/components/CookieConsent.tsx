@@ -95,10 +95,10 @@ const CookieConsent = () => {
   return (
     <>
       {/* Cookie Banner */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t shadow-lg p-4">
-        <div className="container mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t-2 border-t-brand/20 shadow-xl p-4">
+        <div className="container flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-start gap-3 flex-1">
-            <Cookie className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+            <Cookie className="h-5 w-5 text-brand mt-0.5 flex-shrink-0" />
             <div className="text-sm">
               <p className="font-medium mb-1">We use cookies to enhance your experience</p>
               <p className="text-muted-foreground">

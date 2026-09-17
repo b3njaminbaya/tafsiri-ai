@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import PageContainer from "@/components/layout/PageContainer";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -168,7 +169,7 @@ const Translate = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
-      <div className="container mx-auto px-4 py-8">
+      <PageContainer className="py-8">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-4">
@@ -446,7 +447,7 @@ const Translate = () => {
                   underlying translation model was trained on. The languages below are real and
                   planned, but not yet supported — selecting one would silently translate as the
                   wrong language rather than fail, so they're not selectable yet.{" "}
-                  <Link to="/datasets" className="text-primary underline">
+                  <Link to="/datasets" className="text-brand underline underline-offset-4 hover:text-brand/80 transition-colors">
                     Contribute parallel text
                   </Link>{" "}
                   to help get them there.
@@ -462,7 +463,7 @@ const Translate = () => {
             </Card>
           )}
         </div>
-      </div>
+      </PageContainer>
     </div>
   );
 };

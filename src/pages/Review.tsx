@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import PageContainer from "@/components/layout/PageContainer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -58,19 +59,19 @@ const Review = () => {
 
   if (!canReview) {
     return (
-      <div className="container mx-auto px-4 py-24 text-center">
+      <PageContainer className="py-24 text-center">
         <ShieldAlert className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
         <h1 className="text-2xl font-bold mb-2">Reviewer access required</h1>
         <p className="text-muted-foreground max-w-md mx-auto">
           The review queue is available to translator and admin accounts. Ask an
           admin to promote your account if you should have access.
         </p>
-      </div>
+      </PageContainer>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-16">
+    <PageContainer>
       <div className="mb-12">
         <h1 className="text-4xl font-bold tracking-tight mb-4">Review Queue</h1>
         <p className="text-xl text-muted-foreground max-w-3xl">
@@ -132,7 +133,7 @@ const Review = () => {
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 };
 

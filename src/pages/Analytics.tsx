@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import PageContainer from "@/components/layout/PageContainer";
 import {
   Area,
   AreaChart,
@@ -91,7 +92,7 @@ const Analytics = () => {
   }));
 
   return (
-    <div className="container mx-auto px-4 py-16">
+    <PageContainer>
       <div className="mb-12 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
         <div>
           <h1 className="text-4xl font-bold tracking-tight mb-4">
@@ -252,7 +253,7 @@ const Analytics = () => {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </PageContainer>
   );
 };
 

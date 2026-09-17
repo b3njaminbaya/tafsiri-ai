@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import PageContainer from "@/components/layout/PageContainer";
 import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +33,7 @@ const Blog = () => {
   const [featured, ...rest] = posts;
 
   return (
-    <div className="container mx-auto px-4 py-16">
+    <PageContainer>
       <div className="text-center mb-16">
         <h1 className="text-4xl font-bold tracking-tight mb-4">Tafsiri AI Blog</h1>
         <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
@@ -62,7 +63,7 @@ const Blog = () => {
                     <Badge className="bg-primary/10 text-primary border-primary/20">Latest</Badge>
                     {featured.category && <Badge variant="outline">{featured.category}</Badge>}
                   </div>
-                  <CardTitle className="text-2xl mb-3 hover:text-primary transition-colors">
+                  <CardTitle className="text-2xl mb-3 hover:text-brand transition-colors">
                     {featured.title}
                   </CardTitle>
                   {featured.excerpt && (
@@ -93,7 +94,7 @@ const Blog = () => {
                       <div className="flex items-center justify-between mb-2">
                         {post.category && <Badge variant="outline">{post.category}</Badge>}
                       </div>
-                      <CardTitle className="text-lg hover:text-primary transition-colors">
+                      <CardTitle className="text-lg hover:text-brand transition-colors">
                         {post.title}
                       </CardTitle>
                     </CardHeader>
@@ -142,12 +143,12 @@ const Blog = () => {
 
       {user?.role?.name === "admin" && (
         <p className="text-center text-xs text-muted-foreground mt-16">
-          <Link to="/admin" className="underline hover:text-primary">
+          <Link to="/admin" className="underline hover:text-brand">
             Manage posts in the admin panel
           </Link>
         </p>
       )}
-    </div>
+    </PageContainer>
   );
 };
 

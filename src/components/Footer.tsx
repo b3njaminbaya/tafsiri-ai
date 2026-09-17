@@ -13,7 +13,7 @@ import {
 const Footer = () => {
   return (
     <footer className="bg-background border-t">
-      <div className="container mx-auto px-4 py-12">
+      <div className="container py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Company Info */}
           <div className="space-y-4">
@@ -26,7 +26,7 @@ const Footer = () => {
                 href="https://twitter.com" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-primary transition-colors"
+                className="text-muted-foreground hover:text-brand transition-colors"
               >
                 <Twitter className="w-5 h-5" />
               </a>
@@ -34,7 +34,7 @@ const Footer = () => {
                 href="https://github.com" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-primary transition-colors"
+                className="text-muted-foreground hover:text-brand transition-colors"
               >
                 <Github className="w-5 h-5" />
               </a>
@@ -42,13 +42,13 @@ const Footer = () => {
                 href="https://linkedin.com" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-primary transition-colors"
+                className="text-muted-foreground hover:text-brand transition-colors"
               >
                 <Linkedin className="w-5 h-5" />
               </a>
               <a 
                 href="mailto:contact@tafsiri.ai"
-                className="text-muted-foreground hover:text-primary transition-colors"
+                className="text-muted-foreground hover:text-brand transition-colors"
               >
                 <Mail className="w-5 h-5" />
               </a>
@@ -59,19 +59,19 @@ const Footer = () => {
           <div className="space-y-4">
             <h4 className="font-semibold">Product</h4>
             <div className="space-y-2">
-              <Link to="/translate" className="block text-sm text-muted-foreground hover:text-primary transition-colors">
+              <Link to="/translate" className="block text-sm text-muted-foreground hover:text-brand transition-colors">
                 Translator
               </Link>
-              <Link to="/features" className="block text-sm text-muted-foreground hover:text-primary transition-colors">
+              <Link to="/features" className="block text-sm text-muted-foreground hover:text-brand transition-colors">
                 Features
               </Link>
-              <Link to="/api-docs" className="block text-sm text-muted-foreground hover:text-primary transition-colors">
+              <Link to="/api-docs" className="block text-sm text-muted-foreground hover:text-brand transition-colors">
                 API Documentation
               </Link>
-              <Link to="/pricing" className="block text-sm text-muted-foreground hover:text-primary transition-colors">
+              <Link to="/pricing" className="block text-sm text-muted-foreground hover:text-brand transition-colors">
                 Pricing
               </Link>
-              <Link to="/datasets" className="block text-sm text-muted-foreground hover:text-primary transition-colors">
+              <Link to="/datasets" className="block text-sm text-muted-foreground hover:text-brand transition-colors">
                 Datasets
               </Link>
             </div>
@@ -81,18 +81,18 @@ const Footer = () => {
           <div className="space-y-4">
             <h4 className="font-semibold">Resources</h4>
             <div className="space-y-2">
-              <Link to="/blog" className="block text-sm text-muted-foreground hover:text-primary transition-colors flex items-center">
+              <Link to="/blog" className="block text-sm text-muted-foreground hover:text-brand transition-colors flex items-center">
                 <Globe className="w-4 h-4 mr-2" />
                 Blog
               </Link>
-              <Link to="/support" className="block text-sm text-muted-foreground hover:text-primary transition-colors flex items-center">
+              <Link to="/support" className="block text-sm text-muted-foreground hover:text-brand transition-colors flex items-center">
                 <HelpCircle className="w-4 h-4 mr-2" />
                 Support
               </Link>
-              <Link to="/community" className="block text-sm text-muted-foreground hover:text-primary transition-colors">
+              <Link to="/community" className="block text-sm text-muted-foreground hover:text-brand transition-colors">
                 Community Forum
               </Link>
-              <Link to="/status" className="block text-sm text-muted-foreground hover:text-primary transition-colors">
+              <Link to="/status" className="block text-sm text-muted-foreground hover:text-brand transition-colors">
                 System Status
               </Link>
             </div>
@@ -102,20 +102,20 @@ const Footer = () => {
           <div className="space-y-4">
             <h4 className="font-semibold">Legal</h4>
             <div className="space-y-2">
-              <Link to="/privacy-policy" className="block text-sm text-muted-foreground hover:text-primary transition-colors flex items-center">
+              <Link to="/privacy-policy" className="block text-sm text-muted-foreground hover:text-brand transition-colors flex items-center">
                 <Shield className="w-4 h-4 mr-2" />
                 Privacy Policy
               </Link>
-              <Link to="/terms-of-service" className="block text-sm text-muted-foreground hover:text-primary transition-colors">
+              <Link to="/terms-of-service" className="block text-sm text-muted-foreground hover:text-brand transition-colors">
                 Terms of Service
               </Link>
-              <Link to="/cookie-policy" className="block text-sm text-muted-foreground hover:text-primary transition-colors">
+              <Link to="/cookie-policy" className="block text-sm text-muted-foreground hover:text-brand transition-colors">
                 Cookie Policy
               </Link>
-              <Link to="/gdpr-compliance" className="block text-sm text-muted-foreground hover:text-primary transition-colors">
+              <Link to="/gdpr-compliance" className="block text-sm text-muted-foreground hover:text-brand transition-colors">
                 GDPR Compliance
               </Link>
-              <Link to="/security" className="block text-sm text-muted-foreground hover:text-primary transition-colors">
+              <Link to="/security" className="block text-sm text-muted-foreground hover:text-brand transition-colors">
                 Security
               </Link>
             </div>
@@ -130,10 +130,10 @@ const Footer = () => {
           </div>
           <div className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground">
             <span>Built with ❤️ for underserved communities</span>
-            <Link to="/accessibility" className="hover:text-primary transition-colors">
+            <Link to="/accessibility" className="hover:text-brand transition-colors">
               Accessibility
             </Link>
-            <Link to="/contact" className="hover:text-primary transition-colors">
+            <Link to="/contact" className="hover:text-brand transition-colors">
               Contact
             </Link>
           </div>

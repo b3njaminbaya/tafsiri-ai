@@ -1,13 +1,29 @@
 import { Link } from "react-router-dom";
+import PageContainer from "@/components/layout/PageContainer";
+import LegalTableOfContents, { type TocEntry } from "@/components/legal/LegalTableOfContents";
+
+const sections: TocEntry[] = [
+  { id: "information-we-collect", label: "1. Information We Collect" },
+  { id: "how-we-use-your-information", label: "2. How We Use Your Information" },
+  { id: "data-retention-and-security", label: "3. Data Retention and Security" },
+  { id: "data-sharing-and-disclosure", label: "4. Data Sharing and Disclosure" },
+  { id: "your-rights-and-choices", label: "5. Your Rights and Choices" },
+  { id: "international-data-transfers", label: "6. International Data Transfers" },
+  { id: "childrens-privacy", label: "7. Children's Privacy" },
+  { id: "changes-to-this-policy", label: "8. Changes to This Policy" },
+  { id: "contact-us", label: "9. Contact Us" },
+];
 
 const PrivacyPolicy = () => {
   return (
-    <div className="container mx-auto px-4 py-16">
-      <div className="max-w-4xl mx-auto prose prose-slate dark:prose-invert">
+    <PageContainer>
+      <div className="lg:flex lg:gap-12 lg:items-start max-w-5xl mx-auto">
+        <LegalTableOfContents entries={sections} className="lg:order-2" />
+        <div className="max-w-4xl mx-auto prose prose-slate dark:prose-invert">
         <h1 className="text-4xl font-bold tracking-tight mb-8">Privacy Policy</h1>
-        <p className="text-muted-foreground mb-8">Last updated: January 18, 2025</p>
+        <p className="text-muted-foreground mb-8">Last updated: September 18, 2026</p>
 
-        <section className="mb-8">
+        <section id="information-we-collect" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">1. Information We Collect</h2>
           <p className="mb-4">We collect information you provide directly to us, such as when you create an account, use our translation services, or contact us for support.</p>
           
@@ -28,7 +44,7 @@ const PrivacyPolicy = () => {
           </ul>
         </section>
 
-        <section className="mb-8">
+        <section id="how-we-use-your-information" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">2. How We Use Your Information</h2>
           <p className="mb-4">We use the information we collect to:</p>
           <ul className="list-disc pl-6 mb-4">
@@ -41,7 +57,7 @@ const PrivacyPolicy = () => {
           </ul>
         </section>
 
-        <section className="mb-8">
+        <section id="data-retention-and-security" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">3. Data Retention and Security</h2>
           <p className="mb-4">We implement industry-standard security measures to protect your personal information:</p>
           <ul className="list-disc pl-6 mb-4">
@@ -53,7 +69,7 @@ const PrivacyPolicy = () => {
           <p className="mb-4">We retain your personal information only as long as necessary to provide our services or as required by law.</p>
         </section>
 
-        <section className="mb-8">
+        <section id="data-sharing-and-disclosure" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">4. Data Sharing and Disclosure</h2>
           <p className="mb-4">We do not sell, rent, or share your personal information with third parties except:</p>
           <ul className="list-disc pl-6 mb-4">
@@ -65,7 +81,7 @@ const PrivacyPolicy = () => {
           </ul>
         </section>
 
-        <section className="mb-8">
+        <section id="your-rights-and-choices" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">5. Your Rights and Choices</h2>
           <p className="mb-4">You have the right to:</p>
           <ul className="list-disc pl-6 mb-4">
@@ -77,7 +93,7 @@ const PrivacyPolicy = () => {
           </ul>
         </section>
 
-        <section className="mb-8">
+        <section id="international-data-transfers" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">6. International Data Transfers</h2>
           <p className="mb-4">Your information may be transferred to and processed in countries other than your own. We ensure appropriate safeguards are in place, including:</p>
           <ul className="list-disc pl-6 mb-4">
@@ -87,28 +103,29 @@ const PrivacyPolicy = () => {
           </ul>
         </section>
 
-        <section className="mb-8">
+        <section id="childrens-privacy" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">7. Children's Privacy</h2>
           <p className="mb-4">Our services are not intended for children under 13. We do not knowingly collect personal information from children under 13. If we become aware that we have collected such information, we will delete it promptly.</p>
         </section>
 
-        <section className="mb-8">
+        <section id="changes-to-this-policy" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">8. Changes to This Policy</h2>
           <p className="mb-4">We may update this Privacy Policy from time to time. We will notify you of any material changes by posting the new policy on our website and sending you a notification.</p>
         </section>
 
-        <section className="mb-8">
+        <section id="contact-us" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">9. Contact Us</h2>
           <p className="mb-4">
             If you have any questions about this Privacy Policy, please use the{" "}
-            <Link to="/contact" className="text-primary underline">
+            <Link to="/contact" className="text-brand underline underline-offset-4 hover:text-brand/80 transition-colors">
               contact form
             </Link>
             .
           </p>
         </section>
+        </div>
       </div>
-    </div>
+    </PageContainer>
   );
 };
 

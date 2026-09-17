@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import PageContainer from "@/components/layout/PageContainer";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -145,7 +146,7 @@ const Datasets = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-16">
+    <PageContainer>
       <div className="text-center mb-16">
         <h1 className="text-4xl font-bold tracking-tight mb-4">
           Kenyan Language Datasets
@@ -380,7 +381,7 @@ const Datasets = () => {
           </Button>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 };
 

@@ -1,18 +1,37 @@
 import { Link } from "react-router-dom";
+import PageContainer from "@/components/layout/PageContainer";
+import LegalTableOfContents, { type TocEntry } from "@/components/legal/LegalTableOfContents";
+
+const sections: TocEntry[] = [
+  { id: "our-commitment-to-accessibility", label: "Our Commitment to Accessibility" },
+  { id: "accessibility-features", label: "Accessibility Features" },
+  { id: "assistive-technology-compatibility", label: "Assistive Technology Compatibility" },
+  { id: "known-limitations", label: "Known Limitations" },
+  { id: "accessibility-testing", label: "Accessibility Testing" },
+  { id: "getting-help", label: "Getting Help" },
+  { id: "alternative-formats", label: "Alternative Formats" },
+  { id: "training-and-awareness", label: "Training and Awareness" },
+  { id: "continuous-improvement", label: "Continuous Improvement" },
+  { id: "third-party-content", label: "Third-Party Content" },
+  { id: "feedback-and-complaints", label: "Feedback and Complaints" },
+  { id: "resources", label: "Resources" },
+];
 
 const Accessibility = () => {
   return (
-    <div className="container mx-auto px-4 py-16">
-      <div className="max-w-4xl mx-auto prose prose-slate dark:prose-invert">
+    <PageContainer>
+      <div className="lg:flex lg:gap-12 lg:items-start max-w-5xl mx-auto">
+        <LegalTableOfContents entries={sections} className="lg:order-2" />
+        <div className="max-w-4xl mx-auto prose prose-slate dark:prose-invert">
         <h1 className="text-4xl font-bold tracking-tight mb-8">Accessibility Statement</h1>
-        <p className="text-muted-foreground mb-8">Last updated: January 18, 2025</p>
+        <p className="text-muted-foreground mb-8">Last updated: September 18, 2026</p>
 
-        <section className="mb-8">
+        <section id="our-commitment-to-accessibility" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">Our Commitment to Accessibility</h2>
           <p className="mb-4">We are committed to ensuring that our neural machine translation platform is accessible to everyone, including users with disabilities. We strive to comply with the Web Content Accessibility Guidelines (WCAG) 2.1 Level AA standards.</p>
         </section>
 
-        <section className="mb-8">
+        <section id="accessibility-features" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">Accessibility Features</h2>
           
           <h3 className="text-xl font-semibold mb-2">Keyboard Navigation</h3>
@@ -49,7 +68,7 @@ const Accessibility = () => {
           </ul>
         </section>
 
-        <section className="mb-8">
+        <section id="assistive-technology-compatibility" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">Assistive Technology Compatibility</h2>
           <p className="mb-4">Our platform is tested with the following assistive technologies:</p>
           
@@ -76,7 +95,7 @@ const Accessibility = () => {
           </ul>
         </section>
 
-        <section className="mb-8">
+        <section id="known-limitations" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">Known Limitations</h2>
           <p className="mb-4">We are continuously working to improve accessibility. Current known limitations include:</p>
           <ul className="list-disc pl-6 mb-4">
@@ -86,7 +105,7 @@ const Accessibility = () => {
           </ul>
         </section>
 
-        <section className="mb-8">
+        <section id="accessibility-testing" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">Accessibility Testing</h2>
           <p className="mb-4">
             The interface is built on shadcn/ui components, which follow the underlying Radix UI
@@ -97,14 +116,14 @@ const Accessibility = () => {
           </p>
         </section>
 
-        <section className="mb-8">
+        <section id="getting-help" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">Getting Help</h2>
           <p className="mb-4">If you encounter any accessibility barriers while using our platform, please let us know:</p>
           
           <h3 className="text-xl font-semibold mb-2">Contact Methods</h3>
           <p className="mb-4">
             Use the{" "}
-            <Link to="/contact" className="text-primary underline">
+            <Link to="/contact" className="text-brand underline underline-offset-4 hover:text-brand/80 transition-colors">
               contact form
             </Link>{" "}
             to report an accessibility barrier.
@@ -119,7 +138,7 @@ const Accessibility = () => {
           </ul>
         </section>
 
-        <section className="mb-8">
+        <section id="alternative-formats" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">Alternative Formats</h2>
           <p className="mb-4">We can provide information in alternative formats upon request:</p>
           <ul className="list-disc pl-6 mb-4">
@@ -130,7 +149,7 @@ const Accessibility = () => {
           </ul>
         </section>
 
-        <section className="mb-8">
+        <section id="training-and-awareness" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">Training and Awareness</h2>
           <p className="mb-4">Our team receives regular training on accessibility best practices:</p>
           <ul className="list-disc pl-6 mb-4">
@@ -141,7 +160,7 @@ const Accessibility = () => {
           </ul>
         </section>
 
-        <section className="mb-8">
+        <section id="continuous-improvement" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">Continuous Improvement</h2>
           <p className="mb-4">We are committed to ongoing accessibility improvements through:</p>
           <ul className="list-disc pl-6 mb-4">
@@ -152,12 +171,12 @@ const Accessibility = () => {
           </ul>
         </section>
 
-        <section className="mb-8">
+        <section id="third-party-content" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">Third-Party Content</h2>
           <p className="mb-4">While we work to ensure our platform is accessible, we cannot always guarantee the accessibility of third-party content or services integrated into our platform. We encourage our partners to meet accessibility standards and will work with them to address any issues.</p>
         </section>
 
-        <section className="mb-8">
+        <section id="feedback-and-complaints" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">Feedback and Complaints</h2>
           <p className="mb-4">Your feedback helps us improve. If you encounter accessibility issues or have suggestions for improvement, please contact us using the methods listed above. We will:</p>
           <ul className="list-disc pl-6 mb-4">
@@ -168,7 +187,7 @@ const Accessibility = () => {
           </ul>
         </section>
 
-        <section className="mb-8">
+        <section id="resources" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">Resources</h2>
           <p className="mb-4">For more information about web accessibility:</p>
           <ul className="list-disc pl-6 mb-4">
@@ -178,8 +197,9 @@ const Accessibility = () => {
             <li>Section 508 Standards</li>
           </ul>
         </section>
+        </div>
       </div>
-    </div>
+    </PageContainer>
   );
 };
 

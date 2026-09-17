@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import PageContainer from "@/components/layout/PageContainer";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -105,7 +106,7 @@ const Support = () => {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-16">
+    <PageContainer>
       <div className="text-center mb-16">
         <h1 className="text-4xl font-bold tracking-tight mb-4">Support Center</h1>
         <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
@@ -158,7 +159,7 @@ const Support = () => {
           {filteredFaqs.length === 0 ? (
             <p className="text-muted-foreground">
               No FAQs match "{searchQuery}".{" "}
-              <Link to="/contact" className="text-primary underline">
+              <Link to="/contact" className="text-brand underline underline-offset-4 hover:text-brand/80 transition-colors">
                 Contact us
               </Link>{" "}
               with your question instead.
@@ -240,7 +241,7 @@ const Support = () => {
           ))}
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 };
 

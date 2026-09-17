@@ -1,6 +1,17 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -525,43 +536,72 @@ const BlogTab = () => {
   );
 };
 
+type AdminSection = "users" | "glossary" | "blog";
+
+const ADMIN_NAV: { key: AdminSection; label: string; icon: typeof Users }[] = [
+  { key: "users", label: "Users", icon: Users },
+  { key: "glossary", label: "Glossary", icon: Languages },
+  { key: "blog", label: "Blog", icon: BookOpen },
+];
+
+const ADMIN_SECTION_COPY: Record<AdminSection, { title: string; description: string }> = {
+  users: { title: "Users", description: "Change roles or deactivate accounts." },
+  glossary: {
+    title: "Glossary",
+    description: "Terms forced into translation output for a given domain and language pair.",
+  },
+  blog: { title: "Blog", description: "Create, edit, and publish articles." },
+};
+
 const Admin = () => {
+  const [section, setSection] = useState<AdminSection>("users");
+
   return (
-    <div className="container mx-auto px-4 py-16">
-      <div className="flex items-center gap-3 mb-10">
-        <div>
-          <h1 className="text-3xl font-bold">Admin Panel</h1>
-          <p className="text-muted-foreground">Manage users, glossary terms, and blog content.</p>
+    // Not using SidebarInset here: it renders its own <main>, and this page
+    // already sits inside App.tsx's <main className="flex-1">. Two nested
+    // <main> landmarks is invalid HTML/bad a11y, so this hand-rolls the
+    // equivalent layout on a plain div instead.
+    <SidebarProvider className="min-h-[calc(100vh-4rem)]">
+      <Sidebar collapsible="icon">
+        <SidebarHeader>
+          <h2 className="font-semibold px-2 py-1">Admin Panel</h2>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupLabel>Manage</SidebarGroupLabel>
+            <SidebarMenu>
+              {ADMIN_NAV.map(({ key, label, icon: Icon }) => (
+                <SidebarMenuItem key={key}>
+                  <SidebarMenuButton
+                    isActive={section === key}
+                    onClick={() => setSection(key)}
+                    className="data-[active=true]:text-brand data-[active=true]:font-medium"
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroup>
+          {/* Room for a future "Overview" group with summary stat cards. */}
+        </SidebarContent>
+      </Sidebar>
+      <div className="flex min-h-[calc(100vh-4rem)] flex-1 flex-col bg-background">
+        <div className="p-6 md:p-10 space-y-6">
+          <div className="flex items-center gap-3">
+            <SidebarTrigger className="md:hidden" />
+            <div>
+              <h1 className="text-3xl font-bold">{ADMIN_SECTION_COPY[section].title}</h1>
+              <p className="text-muted-foreground">{ADMIN_SECTION_COPY[section].description}</p>
+            </div>
+          </div>
+          {section === "users" && <UsersTab />}
+          {section === "glossary" && <GlossaryTab />}
+          {section === "blog" && <BlogTab />}
         </div>
       </div>
-
-      <Tabs defaultValue="users" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="users" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Users
-          </TabsTrigger>
-          <TabsTrigger value="glossary" className="flex items-center gap-2">
-            <Languages className="h-4 w-4" />
-            Glossary
-          </TabsTrigger>
-          <TabsTrigger value="blog" className="flex items-center gap-2">
-            <BookOpen className="h-4 w-4" />
-            Blog
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="users">
-          <UsersTab />
-        </TabsContent>
-        <TabsContent value="glossary">
-          <GlossaryTab />
-        </TabsContent>
-        <TabsContent value="blog">
-          <BlogTab />
-        </TabsContent>
-      </Tabs>
-    </div>
+    </SidebarProvider>
   );
 };
 

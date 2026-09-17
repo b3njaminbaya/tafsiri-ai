@@ -1,18 +1,36 @@
 import { Link } from "react-router-dom";
+import PageContainer from "@/components/layout/PageContainer";
+import LegalTableOfContents, { type TocEntry } from "@/components/legal/LegalTableOfContents";
+
+const sections: TocEntry[] = [
+  { id: "our-commitment-to-gdpr", label: "1. Our Commitment to GDPR" },
+  { id: "legal-basis-for-processing", label: "2. Legal Basis for Processing" },
+  { id: "your-rights-under-gdpr", label: "3. Your Rights Under GDPR" },
+  { id: "data-protection-measures", label: "4. Data Protection Measures" },
+  { id: "international-data-transfers", label: "5. International Data Transfers" },
+  { id: "data-retention", label: "6. Data Retention" },
+  { id: "data-breach-notification", label: "7. Data Breach Notification" },
+  { id: "data-protection-contact", label: "8. Data Protection Contact" },
+  { id: "how-to-exercise-your-rights", label: "9. How to Exercise Your Rights" },
+  { id: "complaints-and-supervisory-authority", label: "10. Complaints and Supervisory Authority" },
+  { id: "contact-information", label: "11. Contact Information" },
+];
 
 const GdprCompliance = () => {
   return (
-    <div className="container mx-auto px-4 py-16">
-      <div className="max-w-4xl mx-auto prose prose-slate dark:prose-invert">
+    <PageContainer>
+      <div className="lg:flex lg:gap-12 lg:items-start max-w-5xl mx-auto">
+        <LegalTableOfContents entries={sections} className="lg:order-2" />
+        <div className="max-w-4xl mx-auto prose prose-slate dark:prose-invert">
         <h1 className="text-4xl font-bold tracking-tight mb-8">GDPR Compliance</h1>
         <p className="text-muted-foreground mb-8">Last updated: September 17, 2026</p>
 
-        <section className="mb-8">
+        <section id="our-commitment-to-gdpr" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">1. Our Commitment to GDPR</h2>
           <p className="mb-4">We are committed to complying with the General Data Protection Regulation (GDPR) and protecting the privacy rights of individuals in the European Union. This page outlines how we implement GDPR requirements in our neural machine translation platform.</p>
         </section>
 
-        <section className="mb-8">
+        <section id="legal-basis-for-processing" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">2. Legal Basis for Processing</h2>
           <p className="mb-4">We process personal data based on the following legal grounds:</p>
           
@@ -41,7 +59,7 @@ const GdprCompliance = () => {
           </ul>
         </section>
 
-        <section className="mb-8">
+        <section id="your-rights-under-gdpr" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">3. Your Rights Under GDPR</h2>
           <p className="mb-4">As a data subject, you have the following rights:</p>
 
@@ -82,7 +100,7 @@ const GdprCompliance = () => {
           <p className="mb-4">You can object to processing based on legitimate interests or for direct marketing purposes.</p>
         </section>
 
-        <section className="mb-8">
+        <section id="data-protection-measures" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">4. Data Protection Measures</h2>
           <p className="mb-4">Measures actually in place today:</p>
 
@@ -95,35 +113,35 @@ const GdprCompliance = () => {
           <p className="mb-4">
             We do not currently claim independently audited certifications (SOC 2, ISO 27001) or a
             formal penetration-testing program — see the{" "}
-            <Link to="/security" className="text-primary underline">
+            <Link to="/security" className="text-brand underline underline-offset-4 hover:text-brand/80 transition-colors">
               Security page
             </Link>{" "}
             for the full, honest picture.
           </p>
         </section>
 
-        <section className="mb-8">
+        <section id="international-data-transfers" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">5. International Data Transfers</h2>
           <p className="mb-4">
             If you are located outside the region where this service's infrastructure runs, using
             it involves transferring your data internationally. We have not yet formalized Standard
             Contractual Clauses or a Binding Corporate Rules program for these transfers. If this
             matters for your use case, please{" "}
-            <Link to="/contact" className="text-primary underline">
+            <Link to="/contact" className="text-brand underline underline-offset-4 hover:text-brand/80 transition-colors">
               contact us
             </Link>{" "}
             before relying on this platform for it.
           </p>
         </section>
 
-        <section className="mb-8">
+        <section id="data-retention" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">6. Data Retention</h2>
           <p className="mb-4">
             Account data and translation history are retained for as long as your account is
             active, since your translation history is a core feature you can access at any time —
             we do not delete translations after a fixed period. You can permanently anonymize your
             account and revoke your API keys at any time from the{" "}
-            <Link to="/privacy-settings" className="text-primary underline">
+            <Link to="/privacy-settings" className="text-brand underline underline-offset-4 hover:text-brand/80 transition-colors">
               Privacy Dashboard
             </Link>
             . Billing records, where applicable, are retained by our payment processor (Stripe)
@@ -131,20 +149,20 @@ const GdprCompliance = () => {
           </p>
         </section>
 
-        <section className="mb-8">
+        <section id="data-breach-notification" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">7. Data Breach Notification</h2>
           <p className="mb-4">
             In the event of a personal data breach affecting your data, we will notify affected
             users and the relevant supervisory authority as required by applicable law. We do not
             currently operate a dedicated, staffed security incident-response team — see the{" "}
-            <Link to="/security" className="text-primary underline">
+            <Link to="/security" className="text-brand underline underline-offset-4 hover:text-brand/80 transition-colors">
               Security page
             </Link>
             .
           </p>
         </section>
 
-        <section className="mb-8">
+        <section id="data-protection-contact" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">8. Data Protection Contact</h2>
           <p className="mb-4">
             We have not designated a formal Data Protection Officer. For any data protection
@@ -153,7 +171,7 @@ const GdprCompliance = () => {
           </p>
         </section>
 
-        <section className="mb-8">
+        <section id="how-to-exercise-your-rights" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">9. How to Exercise Your Rights</h2>
           <p className="mb-4">To exercise your GDPR rights:</p>
           <ul className="list-disc pl-6 mb-4">
@@ -161,7 +179,7 @@ const GdprCompliance = () => {
             <li>Submit a request through the GDPR request form linked below</li>
             <li>
               Or use the{" "}
-              <Link to="/contact" className="text-primary underline">
+              <Link to="/contact" className="text-brand underline underline-offset-4 hover:text-brand/80 transition-colors">
                 contact form
               </Link>
             </li>
@@ -169,7 +187,7 @@ const GdprCompliance = () => {
           <p className="mb-4">
             Access and portability requests are fulfilled immediately via the real data export in
             your Privacy Dashboard. Other request types are logged and reviewed manually — see{" "}
-            <Link to="/gdpr-request" className="text-primary underline">
+            <Link to="/gdpr-request" className="text-brand underline underline-offset-4 hover:text-brand/80 transition-colors">
               Submit GDPR Request
             </Link>{" "}
             below for what's automated versus what needs a human.
@@ -185,7 +203,7 @@ const GdprCompliance = () => {
           </div>
         </section>
 
-        <section className="mb-8">
+        <section id="complaints-and-supervisory-authority" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">10. Complaints and Supervisory Authority</h2>
           <p className="mb-4">If you believe we have not handled your personal data properly, you have the right to lodge a complaint with:</p>
           <ul className="list-disc pl-6 mb-4">
@@ -196,17 +214,18 @@ const GdprCompliance = () => {
           </ul>
         </section>
 
-        <section className="mb-8">
+        <section id="contact-information" className="mb-8 scroll-mt-24">
           <h2 className="text-2xl font-semibold mb-4">11. Contact Information</h2>
           <p className="mb-4">For GDPR-related inquiries, please use the{" "}
-            <Link to="/contact" className="text-primary underline">
+            <Link to="/contact" className="text-brand underline underline-offset-4 hover:text-brand/80 transition-colors">
               contact form
             </Link>
             . We have not designated an EU representative under Article 27 at this time.
           </p>
         </section>
+        </div>
       </div>
-    </div>
+    </PageContainer>
   );
 };
 

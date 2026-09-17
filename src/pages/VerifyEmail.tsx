@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
+import PageContainer from "@/components/layout/PageContainer";
 
 const VerifyEmail = () => {
   const [searchParams] = useSearchParams();
@@ -26,7 +27,7 @@ const VerifyEmail = () => {
 
   return (
     <div className="min-h-[calc(100vh-140px)] bg-background flex items-center justify-center">
-      <div className="container mx-auto max-w-md py-12 text-center">
+      <PageContainer className="max-w-md py-12 text-center">
         {status === "loading" && (
           <>
             <Loader2 className="h-10 w-10 mx-auto mb-4 animate-spin text-muted-foreground" />
@@ -53,7 +54,7 @@ const VerifyEmail = () => {
             </Link>
           </>
         )}
-      </div>
+      </PageContainer>
     </div>
   );
 };

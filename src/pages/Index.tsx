@@ -30,7 +30,7 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-primary/5 via-background to-secondary/5 pt-20 pb-16 md:pt-32 md:pb-24">
-        <div className="container mx-auto px-4">
+        <div className="container">
           <div className="text-center max-w-4xl mx-auto">
             <Badge className="mb-6" variant="secondary">
               <Star className="w-4 h-4 mr-2" />
@@ -45,7 +45,7 @@ const Index = () => {
               queue that improves quality over time.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-              <Button size="lg" className="text-lg px-8 py-6" asChild>
+              <Button size="lg" className="text-lg px-8 py-6 ring-2 ring-brand/40 hover:ring-brand/70 transition-shadow" asChild>
                 <Link to="/translate">
                   Start Translating <ArrowRight className="w-5 h-5 ml-2" />
                 </Link>
@@ -54,7 +54,7 @@ const Index = () => {
                 <Link to="/login">Get Started Free</Link>
               </Button>
             </div>
-            
+
             {/* Stats — real platform activity, not marketing placeholders */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-2xl mx-auto">
               <div className="text-center">
@@ -86,7 +86,7 @@ const Index = () => {
 
       {/* Features Section */}
       <section className="py-16 md:py-24">
-        <div className="container mx-auto px-4">
+        <div className="container">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Cutting-Edge Translation Technology</h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
@@ -257,7 +257,7 @@ const Index = () => {
 
       {/* Use Cases Section */}
       <section className="py-16 md:py-24 bg-secondary/5">
-        <div className="container mx-auto px-4">
+        <div className="container">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Perfect for Every Use Case</h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
@@ -301,7 +301,7 @@ const Index = () => {
 
       {/* CTA Section */}
       <section className="py-16 md:py-24">
-        <div className="container mx-auto px-4">
+        <div className="container">
           <div className="text-center max-w-3xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold mb-6">
               Ready to Break Language Barriers?

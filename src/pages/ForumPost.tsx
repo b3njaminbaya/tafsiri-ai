@@ -9,6 +9,7 @@ import { ArrowLeft, Clock, Loader2, MessageSquare } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { api, ApiError, type ForumPostDetail } from "@/lib/api";
+import PageContainer from "@/components/layout/PageContainer";
 
 const CATEGORY_LABELS: Record<string, string> = {
   general: "General Discussion",
@@ -68,29 +69,29 @@ const ForumPost = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-16 flex justify-center text-muted-foreground">
+      <PageContainer className="flex justify-center text-muted-foreground">
         <Loader2 className="h-6 w-6 animate-spin mr-2" />
         Loading discussion...
-      </div>
+      </PageContainer>
     );
   }
 
   if (!post) {
     return (
-      <div className="container mx-auto px-4 py-16 text-center space-y-4">
+      <PageContainer className="text-center space-y-4">
         <p className="text-muted-foreground">This discussion couldn't be found.</p>
         <Button variant="outline" onClick={() => navigate("/community")}>
           Back to forum
         </Button>
-      </div>
+      </PageContainer>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-16 max-w-3xl">
+    <PageContainer className="max-w-3xl">
       <Link
         to="/community"
-        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-6"
+        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-brand mb-6"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to forum
@@ -167,14 +168,14 @@ const ForumPost = () => {
       ) : (
         <Card>
           <CardContent className="pt-6 text-sm text-muted-foreground">
-            <Link to="/login" className="text-primary hover:underline">
+            <Link to="/login" className="text-brand hover:underline">
               Log in
             </Link>{" "}
             to join the discussion.
           </CardContent>
         </Card>
       )}
-    </div>
+    </PageContainer>
   );
 };
 

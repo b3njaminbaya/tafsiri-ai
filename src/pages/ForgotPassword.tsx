@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, ApiError } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
+import PageContainer from "@/components/layout/PageContainer";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -27,7 +28,7 @@ const ForgotPassword = () => {
 
   return (
     <div className="min-h-[calc(100vh-140px)] bg-background flex items-center justify-center">
-      <div className="container mx-auto max-w-md py-12">
+      <PageContainer className="max-w-md py-12">
         <h1 className="text-3xl font-bold mb-2">Reset your password</h1>
         <p className="text-muted-foreground mb-6">
           Enter your email and we'll send you a link to reset your password.
@@ -62,7 +63,7 @@ const ForgotPassword = () => {
             </Link>
           </div>
         </div>
-      </div>
+      </PageContainer>
     </div>
   );
 };

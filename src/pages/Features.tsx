@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import PageContainer from "@/components/layout/PageContainer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Bot, Globe, Shield, Database, Users, BarChart3, Code } from "lucide-react";
@@ -50,7 +51,7 @@ const Features = () => {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-16">
+    <PageContainer>
       <div className="text-center mb-16">
         <h1 className="text-4xl font-bold tracking-tight mb-4">
           Built for Kenya's Languages
@@ -86,17 +87,17 @@ const Features = () => {
         <p className="text-muted-foreground max-w-2xl mx-auto mb-6">
           We don't claim SOC 2/ISO 27001 certification, a guaranteed uptime SLA, or custom model
           training — see the{" "}
-          <Link to="/security" className="text-primary underline">
+          <Link to="/security" className="text-brand underline underline-offset-4 hover:text-brand/80 transition-colors">
             Security page
           </Link>{" "}
           for the honest picture, and the{" "}
-          <Link to="/translate" className="text-primary underline">
+          <Link to="/translate" className="text-brand underline underline-offset-4 hover:text-brand/80 transition-colors">
             Translate page
           </Link>{" "}
           for the full Kenyan-language roadmap.
         </p>
       </div>
-    </div>
+    </PageContainer>
   );
 };
 

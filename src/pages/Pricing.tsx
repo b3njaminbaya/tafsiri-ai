@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import PageContainer from "@/components/layout/PageContainer";
 import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -88,7 +89,7 @@ const Pricing = () => {
   const billingConfigured = plans.length > 0;
 
   return (
-    <div className="container mx-auto px-4 py-16">
+    <PageContainer>
       <div className="text-center mb-16">
         <h1 className="text-4xl font-bold tracking-tight mb-4">
           Simple, Transparent Pricing
@@ -212,7 +213,7 @@ const Pricing = () => {
           <Link to="/contact">Contact Sales Team</Link>
         </Button>
       </div>
-    </div>
+    </PageContainer>
   );
 };
 

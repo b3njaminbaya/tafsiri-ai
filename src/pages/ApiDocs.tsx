@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import PageContainer from "@/components/layout/PageContainer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -107,7 +108,7 @@ print(data['translation'])`
   };
 
   return (
-    <div className="container mx-auto px-4 py-16">
+    <PageContainer>
       <div className="text-center mb-16">
         <h1 className="text-4xl font-bold tracking-tight mb-4">API Documentation</h1>
         <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
@@ -157,7 +158,7 @@ print(data['translation'])`
                 <h4 className="font-semibold">1. Get your API key</h4>
                 <p className="text-sm text-muted-foreground">
                   Sign up, verify your email, then generate a key from the{" "}
-                  <Link to="/privacy-settings" className="text-primary underline">
+                  <Link to="/privacy-settings" className="text-brand underline underline-offset-4 hover:text-brand/80 transition-colors">
                     API Keys tab
                   </Link>{" "}
                   of your account.
@@ -212,7 +213,7 @@ print(data['translation'])`
           ))}
         </Tabs>
       </div>
-    </div>
+    </PageContainer>
   );
 };
 
